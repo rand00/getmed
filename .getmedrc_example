@@ -1,0 +1,7 @@
+mount_path = /mnt/mc_cf0
+device_path = DCIM
+image_to_path = /ehmii/images/0k_50d-canon
+video_to_path = /ehmii/video
+append_title = 
+remove_media = true
+unmount = true

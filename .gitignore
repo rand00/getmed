@@ -1,0 +1,10 @@
+*~
+*#
+*.cmo
+*.cmi
+*.native
+*.byte
+/_build
+/test_*
+/core_rand
+
