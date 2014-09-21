@@ -7,4 +7,4 @@
 /_build
 /test_*
 /core_rand
-
+.getmedrc*
