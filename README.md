@@ -11,7 +11,8 @@ Get media from external devices, automatized and CLI.
   * Automated handling of already defined devices.
   * A safe way to transfer files - no overwriting - no deletion of
   un-transferred files.
-  * A practical way to sort media-files into seperate destination-dirs.
+  * A practical way to sort different types of media-files into seperate
+  destination-dirs.
 
 #### The other reasons
 * Testing new functional design-patterns in OCaml.
