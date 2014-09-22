@@ -17,7 +17,7 @@
 *)
 
 open Batteries
-open Core_rand
+open Core_rand00
 
 let term_ncolumns () = 
   match Sys.shell_outlines "stty size" with

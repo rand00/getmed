@@ -17,7 +17,7 @@
 *)
 
 open Batteries 
-open Core_rand
+open Core_rand00
 
 open Settings
 
