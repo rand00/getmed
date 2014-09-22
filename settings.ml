@@ -92,7 +92,7 @@ module SetResMonad = struct
   let ( >>? ) v f = read f v
   let ( >>! ) v f = read_ignore_val f v
   let ( >>& ) v f = ignore_val f v
-  let ( >>@>> ) v f = bad_edit f v
+  let ( >>@ ) v f = bad_edit f v
 
 end
 
