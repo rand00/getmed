@@ -48,8 +48,8 @@ let getmed ~settings ~cmdline_args =
     >>? Settings.print_if_debug
 
     >>& Dev.find_eos >>+ Dev.fix_and_mount 
-    >>@>> Exceptions.wrap 
-      ~wrap:(fun e -> BeforeMounting e)
+    >>@ Exceptions.wrap_renew 
+      (fun bad_exn -> BeforeMounting bad_exn)
       
     >>+ Media.search
     >>? Settings.print_if_debug

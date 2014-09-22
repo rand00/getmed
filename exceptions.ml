@@ -36,5 +36,13 @@ exception RemoveFailure
 (*wrapper exceptions*)
 exception BeforeMounting of exn
 
-let wrap ~wrap exn  = wrap exn
+let wrap_renew wrapper exn = 
+  match exn with 
+  | BeforeMounting exn' -> wrapper exn'
+  | _ -> wrapper exn
+
+(** Wraps a given exn-type in a wrapper-exn to be able to more
+    precisely specify where in the computation something went 
+    wrong. !wrap_renew matches on existing wrapper-exn's and 
+    replaces earlier wrappers.*)
 
