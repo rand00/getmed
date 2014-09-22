@@ -8,7 +8,7 @@ Get media from external devices, automatized and CLI.
 #### The tool-oriented reasons
 * Getting a nice to use CLI tool for transferring images/videos from
 media-devices.
-  * Getting useful realtime CLI output about the transfer-progress as
+* Getting useful realtime CLI output about the transfer-progress as
   an alternative to a bash-script using `cp` or `rsync` - where the
   'time remaining' or a useful progress bar is not output
   (an earlier simple bash version of getmed used `rsync`). 
@@ -20,9 +20,9 @@ destination directories.
 
 #### The other reasons
 * Testing new functional design-patterns in OCaml.
-  * Testbed for bigger future programs.
+* Testbed for bigger future programs.
 * Experience with interfacing with the unix-system from OCaml.
-  * Testing OCaml as a better alternative to bash-scripting.
+* Testing OCaml as a better alternative to bash-scripting.
 * Getting to know the Batteries Included library for OCaml, and writing
 code that makes use of some of it's interesting traits.
 
