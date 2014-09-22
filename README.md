@@ -18,7 +18,7 @@ un-transferred files.
 * A practical way to sort different types of media-files into seperate
 destination directories.
 
-#### The other reasons
+#### The experience reasons
 * Testing new functional design-patterns in OCaml.
 * Testbed for bigger future programs.
 * Experience with interfacing with the unix-system from OCaml.
