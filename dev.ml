@@ -27,7 +27,7 @@ let is_eos = function
   | _ -> false
 
 let find_eos () = 
-  (Sys.shell_outlines "blkid"
+  (Ok (Sys.command_getlines "blkid")
    >>= (fun blkid -> 
      try 
        Ok (Enum.find is_eos blkid 
@@ -43,7 +43,7 @@ let find_eos () =
 
 
 let get_dir_if_mounted dev dir =
-  Sys.shell_outlines "mount" 
+  Ok (Sys.command_getlines "mount")
   >>= (fun mount_lines -> 
     try 
       Enum.find (Pcre.pmatch ~pat:("^" ^ dev)) mount_lines

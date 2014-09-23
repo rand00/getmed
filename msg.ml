@@ -19,15 +19,6 @@
 open Batteries
 open Core_rand00
 
-let term_ncolumns () = 
-  match Sys.shell_outlines "stty size" with
-  | Ok lines -> 
-    ( match lines |> fold (^) "" with
-    | <:re< ["0"-"9"]+ " " (["0"-"9"]+ as cols) >> -> 
-      Int.of_string cols
-    | _ -> 60 )
-  | Bad _ -> 60
-
 let termwrap 
     ?(initial_nonwrap=0) 
     (*options for textwrap >>*)
@@ -38,7 +29,7 @@ let termwrap
     ss = 
   String.concat "" ss
   |> (fun str -> 
-    let wrap_len = term_ncolumns () in
+    let wrap_len = Sys.term_ncolumns () in
     let (init_line, rest_str) = 
       (match initial_nonwrap with
       | 0 -> [], str
