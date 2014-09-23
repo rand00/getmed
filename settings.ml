@@ -81,7 +81,7 @@ module SetResMonad = struct
     | Ok v  -> (f (), settings)
     | (Bad _) as bad -> (bad, settings)
 
-  let bad_edit f (result, settings) =
+  let bad_map f (result, settings) =
     match result with
     | (Ok _) as ok   -> (ok, settings)
     | (Bad e) -> (Bad (f e), settings)
@@ -92,7 +92,7 @@ module SetResMonad = struct
   let ( >>? ) v f = read f v
   let ( >>! ) v f = read_ignore_val f v
   let ( >>& ) v f = ignore_val f v
-  let ( >>@ ) v f = bad_edit f v
+  let ( >>@ ) v f = bad_map f v
 
 end
 
