@@ -20,13 +20,21 @@ open Batteries
 open Core_rand00
 
 type t = {
-  types_to_transfer : Media_types.media;
+
+  inactive : bool;
+  dev_name : string;
+  dev_labels : string list;
+  dev_uuids : string list;
+  dev_subdirs : string list;
   mount_path : string;
-  search_subdir : string;
-  img_to_root : string;
-  vid_to_root : string;
-  title : string;
-  append_title : string;
+
+  types_to_transfer : Media_types.media;
+  img_destinations : string list;
+  vid_destinations : string list;
+
+  folder_title : string;
+  folder_append_title : string;
+
   remove_media : bool;
   unmount : bool;
   debug : bool;
