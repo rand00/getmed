@@ -24,7 +24,9 @@ open Result.Monad
 open Settings
 open File.Infix
 
+(*goto: beginning writing of new rc-format functions*)
 
+(*goto: don't check in cwd for rc--? user can use coming cmdline option instead*)
 let find () = 
   try Ok (
     List.find Sys.file_exists  
@@ -32,6 +34,7 @@ let find () =
         (Sys.getenv "HOME") /: ".getmedrc" ] )
   with Not_found -> Bad RcNotFound
 
+(*goto: order in modules*)
 let get_value = function
   | <:re< ( [" \t"]* "=" [" \t"]* )
       "\""? ( [^"\""]* as value ) >> -> Some value
