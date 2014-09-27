@@ -26,11 +26,10 @@ open File.Infix
 
 (*goto: beginning writing of new rc-format functions*)
 
-(*goto: don't check in cwd for rc--? user can use coming cmdline option instead*)
 let find () = 
   try Ok (
     List.find Sys.file_exists  
-      [ (Sys.getcwd ()) /: ".getmedrc";
+      [ (* (Sys.getcwd ()) /: ".getmedrc"; *)
         (Sys.getenv "HOME") /: ".getmedrc" ] )
   with Not_found -> Bad RcNotFound
 
@@ -77,14 +76,14 @@ let update rc_file ~settings =
    >>= fun lines -> 
    Result.catch 
      (fold (fun settings elem -> 
-       ( match parse_and_set settings elem with
-       | Some settings' -> settings'
-       | None -> settings )
-      ) settings) 
+          ( match parse_and_set settings elem with
+            | Some settings' -> settings'
+            | None -> settings )
+        ) settings) 
      lines)
   |> function
-      | Ok settings -> (Ok ()), settings
-      | (Bad _) as bad -> bad, settings
+  | Ok settings -> (Ok ()), settings
+  | (Bad _) as bad -> bad, settings
 
 let get_template () = String.concat "\n" 
   [ "mount_path = /mnt/your_folder";
