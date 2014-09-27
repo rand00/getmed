@@ -1,0 +1,44 @@
+
+{ @ canon50d
+
+  device_label = EOS_*      #<pattern matching on some settings
+  device_subdir = DCIM
+  mount_path = /mnt/mc_cf0
+  image_destination = /ehmii/images/0k_50d-canon
+  video_destination = /ehmii/video
+  remove_media = true
+  unmount = true
+
+}
+
+{ @ canon50d2
+
+  dont_check
+  device_uuid = c8572475-4741-4083-a53c-1b347d799d6a
+  device_subdir = DCIM
+  mount_path = /mnt/mc_cf1
+  image_destination = /ehmii/images/0k_50d-canon
+  video_destination = /ehmii/video
+  append_title =          #<means set to empty
+  remove_media = true
+  unmount = true
+
+}
+
+{ @ nikoniusmaximus   #>optionally neglect values / just state name of value
+
+  device_uuid = [ "c11192*", "3o112*" ]        #<patternmatching + lists 
+  device_subdir = SOMENIKON                #<should also get an internal list repr.
+  image_destination = [
+    "/ehmii/images/0k_nikoniusmaximus",
+    "/hesti/bak_../.../"
+  ]  
+  video_destination = [
+    "/ehmii/video",
+    "/hesti/.../...t/..t"
+  ]
+  remove_media     #<means use std value (same as if not specified)
+  unmount
+
+}
+
