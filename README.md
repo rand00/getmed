@@ -1,7 +1,6 @@
 getmed
 ======
-
-Get media from external devices, automatized and CLI.
+Download and sort media-files from external mountable devices, automatized and CLI.
 
 ## Motivation for writing `getmed`
 
