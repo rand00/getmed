@@ -43,12 +43,12 @@ let getmed ~settings ~cmdline_args =
   let open Settings.SetResMonad in
   ( eval_put settings 
 
-    >>& Rc.find >>+ Rc.update
+    >>& Rc.find >>+ Rc.update (*goto : change name to update_settings*)
     >>+ Args.update ~cmdline_args 
     >>? Settings.print_if_debug
 
     >>& Dev.find_eos >>+ Dev.fix_and_mount 
-    >>@ Exceptions.wrap_renew 
+    >>@ Exceptions.wrap_renew (*goto : should this not be done before mounting...*)
       (fun bad_exn -> BeforeMounting bad_exn)
       
     >>+ Media.search
