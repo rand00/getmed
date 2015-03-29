@@ -73,15 +73,17 @@ let rec traverse_tree dir ~exts =
   let save path typ = Unix.(
     Some (Enum.singleton {path; typ; size = (Unix.stat path).st_size}))
   in
-  (Sys.files_of dir) //@ 
-    (fun elem -> 
-      let path =  ( dir /: elem ) in
-      if File.is_dir path then 
-        Some (traverse_tree path ~exts)
-      else if path |> is_img then save path `Img
-      else if path |> is_vid then save path `Vid 
-      else None )
-  |> Enum.flatten
+  let rec aux path =
+    (Sys.files_of path) //@ 
+    (fun file -> 
+       let full_path =  ( path /: file ) in
+       if File.is_dir full_path then 
+         Some (aux full_path ~exts)
+       else if path |> is_img then save full_path `Img
+       else if path |> is_vid then save full_path `Vid 
+       else None )
+    |> Enum.flatten
+  in aux dir
 
 let which_media_types media = 
   let rec aux acc = function 
