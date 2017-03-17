@@ -1,0 +1,25 @@
+
+S .
+B _build
+S lib_batext
+B _build/lib_batext
+
+PKG ppx_deriving_yojson
+
+PKG yojson
+S /home/rand/.opam/4.02.3/lib/yojson
+B /home/rand/.opam/4.02.3/lib/yojson
+
+
+PKG text
+S /home/rand/.opam/4.02.3/lib/text
+B /home/rand/.opam/4.02.3/lib/text
+
+PKG text.pcre
+
+PKG text.pcre-syntax
+
+PKG batteries
+
+
+
