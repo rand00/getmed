@@ -17,7 +17,7 @@
 *)
 
 open Batteries
-open Core_rand00
+open BatExt
 
 open Settings
 open Media_types

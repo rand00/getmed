@@ -17,7 +17,7 @@
 *)
 
 open Batteries 
-open Core_rand00
+open BatExt
 
 open Exceptions
 open Result.Monad

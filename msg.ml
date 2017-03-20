@@ -17,7 +17,7 @@
 *)
 
 open Batteries
-open Core_rand00
+open BatExt
 
 let termwrap 
     ?(initial_nonwrap=0) 
