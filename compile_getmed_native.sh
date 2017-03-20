@@ -2,5 +2,5 @@
 
 #important to use -Is instead of -I
 ocamlbuild -use-ocamlfind \
-    -Is core_rand \
+    -Is lib_batext \
     getmed.native
