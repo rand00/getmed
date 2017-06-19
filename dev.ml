@@ -26,7 +26,8 @@ let is_eos = function
   | <:re< _* "EOS_DIGITAL" >> -> true
   | _ -> false
 
-let find_eos () = 
+(*goto make able to find any dev based on settings*)
+let find () = 
   (Ok (Sys.command_getlines "blkid")
    >>= (fun blkid -> 
      try 
@@ -103,7 +104,7 @@ let mount dev = function
             Bad MountError ))
 
 
-let fix_and_mount dev ~settings = Settings.(
+let mount_smartly dev ~settings = Settings.(
   (mountpoint_fix_or_find dev settings.mount_path >>= mount dev)
   |> function
       | Ok mount_path -> ((Ok ()), { settings with mount_path })

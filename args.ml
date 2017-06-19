@@ -96,13 +96,15 @@ let handle_all () =
 
 let update () ~cmdline_args ~settings = 
   (List.fold_left_result (fun settings_acc arg -> 
-    match arg with 
-    | Append_title s -> Ok { settings_acc with append_title = s } 
-    | Debug b -> Ok { settings_acc with debug = b }
-   ) settings cmdline_args)
+       match arg with 
+       | Append_title s ->
+         Ok { settings_acc with append_title = s } 
+       | Debug b ->
+         Ok { settings_acc with debug = b }
+     ) settings cmdline_args)
   |> function
-      | Ok settings -> (Ok ()), settings
-      | (Bad _) as bad -> bad, settings
-  
+  | Ok settings -> (Ok ()), settings
+  | (Bad _) as bad -> bad, settings
+
 
 (**For updating settings from cmd-line args*)

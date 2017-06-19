@@ -50,53 +50,8 @@ let empty = {
   debug = false;
 }
 
-module SetResMonad = struct 
 
-  let return v ~settings = (v, settings)
-
-  let put settings = (Ok (), settings)
-
-  let bind f (result, settings) = 
-    match result with 
-    | Ok v  -> f v ~settings
-    | (Bad _) as bad -> (bad, settings)
-
-  let map f (result, settings) =
-    match result with 
-    | Ok v  -> (f v, settings)
-    | (Bad _) as bad -> (bad, settings)
-
-  let read f (result, settings) =
-    match result with 
-    | Ok v  -> (f v ~settings, settings)
-    | (Bad _) as bad -> (bad, settings)
-
-  let read_ignore_val f (result, settings) =
-    match result with 
-    | Ok v  -> (f ~settings, settings)
-    | (Bad _) as bad -> (bad, settings)
-
-  let ignore_val f (result, settings) =
-    match result with 
-    | Ok v  -> (f (), settings)
-    | (Bad _) as bad -> (bad, settings)
-
-  let bad_map f (result, settings) =
-    match result with
-    | (Ok _) as ok   -> (ok, settings)
-    | (Bad e) -> (Bad (f e), settings)
-
-
-  let ( >>+ ) v f = bind f v
-  let ( >>| ) v f = map f v
-  let ( >>? ) v f = read f v
-  let ( >>! ) v f = read_ignore_val f v
-  let ( >>& ) v f = ignore_val f v
-  let ( >>@ ) v f = bad_map f v
-
-end
-
-let eval_put settings_thunk = SetResMonad.(
+let eval_put settings_thunk = StateResult.(
   try return (Ok ()) ~settings:(settings_thunk ())
   with Not_found -> 
     Msg.term `Error "settings" 

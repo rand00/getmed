@@ -28,7 +28,7 @@ let handle_result = function
   | ((Ok _), _) -> 
     ( Msg.term `Notif "main" [ "Getmed ran succesfully." ];
       exit 0 )
-  | ((Bad (BeforeMounting _ )), _ ) -> exit 1
+  | ((Bad (BeforeMounting exn )), _ ) -> raise exn
   | ((Bad exn_after_mounting), settings) ->
     ((match settings.unmount with 
     | true  -> ( Dev.unmount ~settings |> ignore )
@@ -39,51 +39,34 @@ let handle_result = function
 (**Run `getmed with super-user rights (for blkid and mounting)*)
 
 let getmed ~settings ~cmdline_args = 
-
-  let open Settings.SetResMonad in
-  ( eval_put settings 
-
-    >>& Rc.find >>+ Rc.update
-    >>+ Args.update ~cmdline_args 
+  let open StateResult.Infix in
+  let module S = StateResult.Settings in
+  begin 
+    StateResult.return () ~settings
+    >>= S.lift Rc.find 
+    >>= Rc2.update
+    >>= Args.update ~cmdline_args
     >>? Settings.print_if_debug
 
-    >>& Dev.find_eos >>+ Dev.fix_and_mount 
-    >>@ Exceptions.wrap_renew 
-      (fun bad_exn -> BeforeMounting bad_exn)
-      
-    >>+ Media.search
+    (*>goto make general, depending on new settings*)
+    >>= S.lift Dev.find
+    >>= Dev.mount_smartly 
+    >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
+
+    >>= Media.search (*goto depend on new settings*)
     >>? Settings.print_if_debug
-    >>+ fun media ~settings -> 
-      put settings
-
-      >>! Media.dirs_fix
-      >>! Media.transfer media
-      >>! Media.remove media 
-      >>! Dev.unmount )
-
-  |> handle_result
+    >>= fun media ~settings -> 
+    StateResult.return () ~settings (*> goto all these could be >>? (but using same symbol)*)
+    >>= S.read_ignore Media.dirs_fix
+    >>= S.read_ignore (Media.transfer media)
+    >>= S.read_ignore (Media.remove media)
+    >>= S.read_ignore Dev.unmount
+  end |> handle_result
 
 
-let init () = 
-
-  let std_settings_thunk () = {
-    types_to_transfer = `All;
-    mount_path = "/mnt/getmed_device0";
-    search_subdir = "DCIM"; 
-    img_to_root = (Sys.getenv "HOME") /: "Videos" /: "getmed"; 
-    vid_to_root = (Sys.getenv "HOME") /: "Pictures" /: "getmed";
-    title = Folder.Name.today();
-    append_title = ""; 
-    remove_media = false;
-    unmount = true;
-    debug = false;
-  } 
-  and cmdline_args = Args.handle_all () (*possibly exits*)
-  in 
-
+let _ = 
   getmed 
-    ~settings:std_settings_thunk
-    ~cmdline_args
+    ~settings:(Rc2.std)
+    ~cmdline_args:(Args.handle_all ())
 
 
-let _ = init ()

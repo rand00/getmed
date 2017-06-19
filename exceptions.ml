@@ -18,6 +18,7 @@
 
 exception CreateFolder
 exception RcNotFound
+exception RcParseError of string
 
 (*device*)
 exception DeviceFolderNonExistent 

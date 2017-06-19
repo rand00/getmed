@@ -99,31 +99,31 @@ let which_media_types media =
 
 let search_exts exts ~settings = 
   let s = settings in
-  let subdir = ( s.mount_path /: s.search_subdir )
-  in ( match File.is_dir subdir with 
+  let subdir = ( s.mount_path /: s.search_subdir ) in (
+    match File.is_dir subdir with 
+    | true ->
+      StateResult.Infix.(
+        ((Result.catch (traverse_tree ~exts) subdir), settings)
+        >>= (fun media_enum ~settings -> 
+            let media_list = List.of_enum media_enum in
+            let settings =
+              { settings with 
+                types_to_transfer = which_media_types media_list
+              }
+            in 
+            match media_list with 
+            | [] -> 
+              ( Msg.term `Notif "media search"
+                  [ "No media files present in the specified";
+                    "device subfolder - aborting." ];
+                ((Bad MediaNotPresent), settings) )
+            | file_list -> ((Ok file_list), settings) ))
 
-  | true -> Settings.SetResMonad.(
-    (return ~settings 
-       (Result.catch (traverse_tree ~exts) subdir))
-
-    >>+ (fun media_enum ~settings -> 
-      let media_list = List.of_enum media_enum in
-      let settings = { settings with 
-        types_to_transfer = which_media_types media_list }
-      in 
-      match media_list with 
-      | [] -> 
-        ( Msg.term `Notif "media search"
-            [ "No media files present in the specified";
-              "device subfolder - aborting." ];
-          ((Bad MediaNotPresent), settings) )
-      | file_list -> ((Ok file_list), settings) )) 
-
-  | false -> 
-    ( Msg.term `Error "media search"
-        [ "The device directory '"; subdir; "', does not";
-          "exist - aborting." ];
-      ((Bad DeviceFolderNonExistent), settings) ))
+    | false -> 
+      ( Msg.term `Error "media search"
+          [ "The device directory '"; subdir; "', does not";
+            "exist - aborting." ];
+        ((Bad DeviceFolderNonExistent), settings) ))
 
 
 let search () ~settings = 

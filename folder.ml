@@ -54,6 +54,7 @@ let create_if_nonexistent folder =
 
 module Name = struct 
 
+  (*goto could have used printf here?..*)
   let pad_zero pad_full digit = String.(
     let digit_str = of_int digit in
     let lpad = pad_full - (length digit_str) in
