@@ -45,7 +45,7 @@ let handle_errors = function
   . make bind automatically catch exceptions?
     . think
 *)
-let handle_devices () ~settings =
+let handle_devices ~settings () =
   let rec aux ~settings devices () =
     match devices with
     | [] -> Ok (), settings
@@ -81,7 +81,7 @@ let getmed ~settings ~cmdline_args =
     >>= Rc2.update
     (*goto make rc be in a wrapper with extra fields - check zim?*)
     >>= Rc2.update_cli ~args:cmdline_args
-    >>? Settings.print_if_debug
+    >>? Rc2.print_if_debug
     >>= handle_devices
   end |> handle_result
 

@@ -144,8 +144,7 @@ let find () =
 type file_path = string
   
 (*goto continue writing interface*)
-let update : file_path -> settings:config -> (unit, _) result * config
-  = fun file ~settings ->
+let update ~settings file =
     Yojson.Safe.from_file file
     |> config_of_yojson
     |> function
@@ -167,7 +166,7 @@ let update_one_arg rc arg = List.map (update_one_dev arg) rc
 
 let update_cli_aux rc args = List.fold_left update_one_arg rc args
 
-let update_cli ~args () ~settings =
+let update_cli ~args ~settings () =
   BatResult.Ok (),
   { settings with
     devices = update_cli_aux settings.devices args }
