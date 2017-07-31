@@ -1,7 +1,7 @@
 
 true: \
   thread, \
-  package(batteries,text,text.pcre,textwrap)
+  package(batteries,text,text.pcre,textwrap, pcre)
 
 <rc.*> or <dev.*> or <lib_batext/**>: \
   syntax(camlp4o), \
