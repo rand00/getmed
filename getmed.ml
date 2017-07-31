@@ -18,16 +18,17 @@
 
 open Batteries
 open BatExt
-
-open Settings
+open File.Infix
 open Exceptions
 
-open File.Infix
+open Rc2.T
+open StateResult.Infix
+module S = StateResult.Settings
 
-let handle_result = function 
+let handle_errors_and_unmount = function 
   | ((Ok _), _) -> 
     ( Msg.term `Notif "main" [ "Getmed ran succesfully." ];
-      exit 0 )
+      Ok () )
   | ((Bad (BeforeMounting exn )), _ ) -> raise exn
   | ((Bad exn_after_mounting), settings) ->
     ((match settings.unmount with 
@@ -35,32 +36,49 @@ let handle_result = function
     | false -> () );
      raise exn_after_mounting )
 
+(* goto rewrite all modules to use rresult? 
+   (if yes, do after it all works again) *)
+
+(*>goto 
+  . make bind automatically catch exceptions?
+    . think
+*)
+let handle_devices () ~settings =
+  let rec aux = function
+    | [] -> Ok (), settings
+    | dev :: tl -> begin
+        StateResult.return () ~settings:dev
+        >>= Dev.find 
+        >>= Dev.mount_smartly
+        >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
+
+        >>= Media.search 
+        >>? Rc2.print_if_debug
+
+        >>= fun ~settings media -> 
+        StateResult.return () ~settings
+        >> (S.read @@ Media.dirs_fix)
+        >> (S.read @@ Media.transfer media)
+        >> (S.read @@ Media.cleanup media)
+        >> (S.read @@ Dev.unmount)
+        |> handle_errors_and_unmount
+        >>= aux tl
+      end in
+  aux settings.devices
+
+
 
 (**Run `getmed with super-user rights (for blkid and mounting)*)
 
 let getmed ~settings ~cmdline_args = 
-  let open StateResult.Infix in
-  let module S = StateResult.Settings in
   begin 
-    StateResult.return () ~settings
-    >>= S.lift Rc.find 
+    StateResult.return ~settings ()
+    >>= S.lift Rc2.find 
     >>= Rc2.update
-    >>= Args.update ~cmdline_args
+    (*goto make rc be in a wrapper with extra fields - check zim?*)
+    >>= Rc2.update_cli ~args:cmdline_args
     >>? Settings.print_if_debug
-
-    (*>goto make general, depending on new settings*)
-    >>= S.lift Dev.find
-    >>= Dev.mount_smartly 
-    >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
-
-    >>= Media.search (*goto depend on new settings*)
-    >>? Settings.print_if_debug
-    >>= fun media ~settings -> 
-    StateResult.return () ~settings (*> goto all these could be >>? (but using same symbol)*)
-    >>= S.read_ignore Media.dirs_fix
-    >>= S.read_ignore (Media.transfer media)
-    >>= S.read_ignore (Media.remove media)
-    >>= S.read_ignore Dev.unmount
+    >>= handle_devices
   end |> handle_result
 
 

@@ -19,8 +19,16 @@
 open Batteries 
 open BatExt
 
-open Settings
+module T = struct 
+  type cli_arg = [
+    | `Append_title of string
+    | `Debug of bool
+  ]
 
+  type t = cli_arg
+end
+open T
+    
 let handle_all () = 
   let make_indent ?(extra_indent=0) ?(arg_parse_std=5) arg = 
     String.make 
@@ -43,14 +51,14 @@ let handle_all () =
   
   Arg.parse 
     [ ( append_short_arg, 
-        Arg.String (fun s -> args_acc := ((Append_title s) :: !args_acc)),
+        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
         Msg.termwrap 
           ~initial_indent:append_short_indent
           ~subsequent_indent:append_short_indent
           ~initial_nonwrap:(String.length append_short_indent)
           [ append_title_doc ] );
       ( append_long_arg, 
-        Arg.String (fun s -> args_acc := ((Append_title s) :: !args_acc)),
+        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
         Msg.termwrap 
           ~initial_indent:append_long_indent
           ~subsequent_indent:append_long_indent
@@ -58,7 +66,7 @@ let handle_all () =
           [ append_title_doc ] );
       ( std_rc_arg, 
         Arg.Unit (fun () -> 
-          Rc.get_template () 
+          Rc2.get_template () 
           |> print_endline; 
           exit 0),
         Msg.termwrap 
@@ -71,7 +79,7 @@ let handle_all () =
             "home folder or current working directory."; 
           ] ); 
       ( debug_arg, 
-        Arg.Unit (fun () -> args_acc := ((Debug true) :: !args_acc)),
+        Arg.Unit (fun () -> args_acc := ((`Debug true) :: !args_acc)),
         Msg.termwrap 
           ~initial_indent:debug_indent
           ~subsequent_indent:debug_indent
@@ -85,21 +93,28 @@ let handle_all () =
         ~initial_indent:""
         ~subsequent_indent:""
         ~initial_nonwrap:1
-        [ "\nGetmed is a cmd-line program for automatically transferring media ";
-          "from a connected camera device. Make a '.getmedrc' file in your ";
-          "home-folder or current working directory to specify your personal ";
+        [ "\nGetmed is a cmd-line program for automatically ";
+          "transferring media from a connected camera device. ";
+          "Make a '.getmedrc' file in your home-folder or ";
+          "current working directory to specify your personal ";
           "settings."; ]) 
      ^ "\n\n*** Arguments ***");
   
   !args_acc (* the accumulated arguments returned *)
 
+open Rc2
 
+(*goto why did I use fold_left_result.. *)
 let update () ~cmdline_args ~settings = 
   (List.fold_left_result (fun settings_acc arg -> 
        match arg with 
-       | Append_title s ->
-         Ok { settings_acc with append_title = s } 
-       | Debug b ->
+       | `Append_title s ->
+         let devices =
+           List.map (fun d -> { d with folders_append = s })
+             settings_acc.devices
+         in
+         Ok { settings_acc with devices } 
+       | `Debug b ->
          Ok { settings_acc with debug = b }
      ) settings cmdline_args)
   |> function

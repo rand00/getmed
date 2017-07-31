@@ -26,21 +26,38 @@ let is_eos = function
   | <:re< _* "EOS_DIGITAL" >> -> true
   | _ -> false
 
+let pmatch ~pattern s = Pcre.pmatch ~pat:pattern s
+
+(*goto factor out is-device checking all user-patterns*)
+let is_device device_match blkid_line =
+  List.exists (fun pattern ->
+      pmatch
+        ~pattern:(
+          match pattern with
+          | `Uuid p -> " UUID=\"" ^ p ^ "\""
+          | `Label p -> " LABEL=\"" ^ p ^ "\""
+        )
+        blkid_line
+    ) device_match
+
 (*goto make able to find any dev based on settings*)
-let find () = 
-  (Ok (Sys.command_getlines "blkid")
-   >>= (fun blkid -> 
-     try 
-       Ok (Enum.find is_eos blkid 
-              |> (function 
-                  | <:re< ("/dev/" _* as dev) ":" >> -> dev 
-                  | _ -> ""))
-     with Not_found ->
-       ( Msg.term `Error "find_eos"
-           [ "There is no relevant device present, ";  
-             "or you have not run getmed with the proper ";
-             "rights." ];
-         Bad DeviceNotPresent )))
+(*goto trap exceptions in monad (and in all other functions)*)
+let find ~settings () = 
+  let open Rc2 in
+  let blkid = Sys.command_getlines "blkid" in
+  try 
+    (Ok (Enum.find (is_device settings.device_match) blkid 
+         |> (function 
+             | <:re< ("/dev/" _* as dev) ":" >> -> dev 
+             | _ -> "")))
+  , settings
+  with Not_found ->
+    ( Msg.term `Error "find_device"
+        [ "There is no relevant device present, ";  
+          "or you have not run getmed with the proper ";
+          "rights." ];
+      (Bad DeviceNotPresent), settings
+    )
 
 
 let get_dir_if_mounted dev dir =
@@ -104,14 +121,15 @@ let mount dev = function
             Bad MountError ))
 
 
-let mount_smartly dev ~settings = Settings.(
+let mount_smartly ~settings dev = Rc2.(
   (mountpoint_fix_or_find dev settings.mount_path >>= mount dev)
   |> function
       | Ok mount_path -> ((Ok ()), { settings with mount_path })
       | (Bad _) as bad -> (bad, settings) )
 
+open Rc2.T
 
-let unmount ~settings = Settings.(
+let unmount ~settings () = 
   let s = settings in
   match s.unmount with
   | false -> 
@@ -128,5 +146,5 @@ let unmount ~settings = Settings.(
               [ "Error occured during unmounting. "; 
                 "Error-code was '"; String.of_int errcode;
                 "'." ];
-            Bad UnMountFailure )))
+            Bad UnMountFailure ))
       

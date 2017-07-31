@@ -16,15 +16,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-type media = [ `Img | `Vid | `All | `None ]
+type media_type = [ `Img | `Img_meta | `Vid | `Vid_meta | `All | `None ]
 
 type media_file = {
   path : string;
-  typ : media;
+  typ : media_type;
   size : int
 }
 
-type media_types_to_transfer = {
-  mutable img : bool; 
-  mutable vid : bool;
-}
+

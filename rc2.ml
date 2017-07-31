@@ -16,54 +16,71 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-(*
-open Result.Monad
-open Settings
-*)
-open Exceptions
-
 module ResultStd = Result
-
 open Batteries 
 open BatExt
-
 open File.Infix
 module Result = ResultStd
 
-type device_config = {
-  name : string;
-  active : bool;
+open Exceptions
 
-  device_match : [ `Uuid of string | `Label of string ] list;
+module T = struct 
 
-  mount_path : string;
-  search_subdirs : [ `Recurse of string | `Only of string ] list;
-  
-  image_exts : string list;
-  image_meta_exts : string list;
+  type device_config = {
+    name : string;
+    active : bool;
 
-  video_exts : string list;
-  video_meta_exts : string list;
+    device_match : [ `Uuid of string | `Label of string ] list;
 
-  (*have separate for vid/img?*)
-  folders_append : [ `String of string | `Nothing ];
-  folders_prepend : [ `Date | `String of string | `Nothing ];
+    mount_path : string;
+    search_subdirs : [ `Recurse of string | `Only of string ] list;
 
-  (*goto remember support environment vars in dir names
-    < what about env-vars for other fields?
+    types_to_transfer : [ `Img | `Vid | `All | `None ];
+    
+    image_exts : string list;
+    image_meta_exts : string list;
+
+    video_exts : string list;
+    video_meta_exts : string list;
+
+    (*gomaybe have separate for vid/img?*)
+    (*gomaybe have option that appends camera-name
+      e.g. 20172312_title_sony-rx100 for having from all cameras in
+      same folder
+    *)
+    folders_append : string;
+    (*gomaybe later would be useful to have time as well?*)
+    folders_prepend : [ `Date | `String of string | `Nothing ];
+
+    (*goto remember support environment vars in dir names
+      < what about env-vars for other fields?
+    *)
+    image_destinations : string list;
+    video_destinations : string list;
+
+    (* images_groupby : "DATE_CREATION" *)
+
+    cleanup : [ `Remove_originals | `Format | `None ];
+    unmount : bool;
+
+  } [@@ deriving yojson]
+
+  (*goto report github issue that deriving signals 'config' as missing
+    where it's 'boolean'
   *)
-  image_destinations : string list;
-  video_destinations : string list;
+  type config = {
+    debug : bool;
+    devices : device_config list;
+  } [@@ deriving yojson]
 
-  (* images_groupby : "DATE_CREATION" *)
+end
+include T
 
-  cleanup : [ `Remove_originals | `Format | `None ];
-  unmount : bool;
-
-} [@@ deriving yojson]
-
-type config = device_config list
-[@@ deriving yojson]
+let folder_prefix settings =
+  match settings.folders_prepend with
+    | `Date -> Folder.Name.today ()
+    | `String s -> s
+    | `Nothing -> ""
 
 let example = {
   name = "camera-name";
@@ -71,13 +88,14 @@ let example = {
   device_match = [ `Label "DEVICE_LABEL_WITH_WILDCARD" ];
   mount_path = "/mount/path";
   search_subdirs = [ `Recurse "/folders/within/device/to/search" ];
-
+  types_to_transfer = `All;
+  
   image_exts = [ "jpg"; "cr2"; "arw"; ];
   image_meta_exts = ["xmp"];
   video_exts = [ "mov"; "avi"; "mp4" ];
   video_meta_exts = [ "xml" ];
 
-  folders_append = `String "folder_appended_title";
+  folders_append = "folder_appended_title";
   folders_prepend = `String "folder_prepend_string";
 
   image_destinations = [ "/image/root/destinations" ];
@@ -93,13 +111,14 @@ let std = {
   device_match = [ `Label "EOS_*" ];
   mount_path = "/tmp/getmed-tmp";
   search_subdirs = [ `Recurse "/" ];
-
+  types_to_transfer = `All;
+  
   image_exts = [ "jpg"; "cr2"; "arw"; ]; (*goto add more*)
   image_meta_exts = ["xmp"];
   video_exts = [ "mov"; "avi"; "mp4" ];
-  video_meta_exts = [ "xml" ];
+  video_meta_exts = [ "xml"; "log" (*magick lantern*) ];
 
-  folders_append = `Nothing;
+  folders_append = "";
   folders_prepend = `Date;
 
   image_destinations = [ "$HOME/Pictures/getmed/" ];
@@ -140,17 +159,50 @@ let update : file_path -> settings:config -> (unit, _) result * config
 
     (* failwith "todo" *)
 
+let update_one_dev arg dev =
+  match arg with
+  | `Folders_append s -> { dev with folders_append = s }
+
+let update_one_arg rc arg = List.map (update_one_dev arg) rc
+
+let update_cli_aux rc args = List.fold_left update_one_arg rc args
+
+let update_cli ~args () ~settings =
+  BatResult.Ok (),
+  { settings with
+    devices = update_cli_aux settings.devices args }
+
+(*goo update_cli with lift*) 
+
+
 let get_template : unit -> string
   = fun () ->
     failwith "todo"
 
-let test = false
+let to_string config =
+  config 
+  |> config_to_yojson
+  |> Yojson.Safe.to_string
 
+let print_if_debug pass_on ~settings = 
+  let () = match settings.debug with 
+    | false -> ()
+    | true -> 
+      let sep = (String.make 35 '>') in
+      let print_frame s = 
+        print_endline 
+          (String.concat "\n" [ sep; s; sep ]) in
+      print_frame (to_string settings)  (*goo*)
+  in Ok (pass_on)
+
+
+(*
 let _ =
+  let test = false in
   if test then 
     match Sys.argv with
     | [| _; "print" |] -> 
-      [
+      { devices = [
         {
           name = "canon50d";
           active = true;
@@ -172,7 +224,7 @@ let _ =
           cleanup = `Remove_originals;
           unmount = true;
         }
-      ]
+      ]}
       |> config_to_yojson
       |> Yojson.Safe.to_string
       |> print_endline
@@ -186,6 +238,6 @@ let _ =
       |> function
       | Result.Ok _ -> print_endline "Sucesfully parsed input"
       | Result.Error e -> print_endline ("Error: "^e)
-
+*)
 
 

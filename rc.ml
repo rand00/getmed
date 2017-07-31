@@ -18,11 +18,9 @@
 
 open Batteries 
 open BatExt
-
-open Exceptions
 open Result.Monad
-open Settings
 open File.Infix
+open Exceptions
 
 
 let find () = 

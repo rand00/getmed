@@ -19,36 +19,43 @@
 open Batteries
 open BatExt
 
-open Settings
+open File.Infix
+open BatResult.Monad
+
+open Rc2.T
 open Media_types
 open Exceptions
 
-open File.Infix
-open Result.Monad
 
+(*goto think > user might want to append camera-name and have all 
+  folders from diff. cameras in same dir, e.g. 'root/20170101_title_hi_sonyRx100'
+*)
+(*goto fix media types - take list of destinations from new settings*)
 
-let concat_title ~settings typ = 
+let concat_titles ~settings typ = 
   let s = settings in
   let c root = String.concat "" 
     (List.flatten
-       [ [ root; "/"; s.title; ];
-         ( match s.append_title with
+       [ [ root; "/"; Rc2.folder_prefix s; ];
+         ( match s.folders_append with
          | "" -> [ "" ] 
-         | _  -> [ "_"; s.append_title ])])
+         | _  -> [ "_"; s.folders_append ])])
   in match typ with 
-  | `Img -> c s.img_to_root
-  | `Vid -> c s.vid_to_root
+  | `Img -> List.map c s.image_destinations
+  | `Vid -> List.map c s.video_destinations
   | _ -> failwith "pass an `Img or `Vid type"
 
 
-let dirs_fix ~settings = 
+let dirs_fix ~settings () =
+  let create_dir _ str = Folder.create_if_nonexistent str in
+  let create_dirs dirs = List.fold_left_result create_dir true dirs
+  in
   match settings.types_to_transfer with 
-  | `Img -> Folder.create_if_nonexistent (concat_title `Img ~settings)
-  | `Vid -> Folder.create_if_nonexistent (concat_title `Vid ~settings)
+  | `Img -> create_dirs @@ concat_titles `Img ~settings
+  | `Vid -> create_dirs @@ concat_titles `Vid ~settings
   | `All -> 
-    ( Folder.create_if_nonexistent (concat_title `Img ~settings)
-      >>= fun _ -> 
-      Folder.create_if_nonexistent (concat_title `Vid ~settings) )
+    ( create_dirs @@ concat_titles `Img ~settings >>= fun _ -> 
+      create_dirs @@ concat_titles `Vid ~settings )
   | `None -> 
     ( Msg.term `Notif "fix media directories"
         [ "No media-files were present on the device." ];
@@ -66,50 +73,99 @@ let exts_std = {
 }
 
 
-let rec traverse_tree dir ~exts =
-  let is_img path = List.mem (File.ext path) exts.imgs
-  and is_vid path = List.mem (File.ext path) exts.vids 
+(*gomaybe generalize into RaUtil *)
+(*goto test!*)
+let rec traverse_tree
+    ~image_exts
+    ~image_meta_exts
+    ~video_exts
+    ~video_meta_exts
+    ~recurse
+    dir
+  =
+  let is_ext ext_def path = List.mem (File.ext path) image_exts in
+  let save path typ = 
+    Some {path; typ; size = (Unix.stat path).Unix.st_size}
   in
-  let save path typ = Unix.(
-    Some (Enum.singleton {path; typ; size = (Unix.stat path).st_size}))
+  let files = Sys.files_of dir
   in
-  (Sys.files_of dir) //@ 
-    (fun elem -> 
+  let filter_files mediatype extensions = files //@ fun elem -> 
+      let path = ( dir /: elem ) in
+      if is_ext extensions path then save path mediatype else None 
+  in
+  let filter_meta meta_type media_files extensions =
+    if not @@ Enum.is_empty media_files then
+      filter_files meta_type extensions
+    else Enum.empty ()
+  in
+  let image_files = filter_files `Img image_exts
+  and video_files = filter_files `Vid video_exts in
+  let image_meta_files = filter_meta `Img_meta image_files image_meta_exts
+  and video_meta_files = filter_meta `Vid_meta video_files video_meta_exts
+  in
+  let nested_files = (files //@ fun elem -> 
       let path =  ( dir /: elem ) in
-      if File.is_dir path then 
-        Some (traverse_tree path ~exts)
-      else if path |> is_img then save path `Img
-      else if path |> is_vid then save path `Vid 
-      else None )
+      if File.is_dir path && recurse then 
+        Some (traverse_tree path
+                ~image_exts
+                ~image_meta_exts
+                ~video_exts
+                ~video_meta_exts
+                ~recurse
+             )
+      else None
+    ) |> Enum.flatten
+  in List.enum [
+    image_files;
+    image_meta_files;
+    video_files;
+    video_meta_files;
+    nested_files;
+  ]
   |> Enum.flatten
+                  
 
-let which_media_types media = 
+let which_media_types extract_type media = 
   let rec aux acc = function 
-    | { typ = `Img } :: rest_media -> 
-      ( match acc with 
-      | `Img | `None -> aux `Img rest_media
-      | `Vid | `All -> `All ) 
-    | { typ = `Vid } :: rest_media -> 
-      ( match acc with 
-      | `Vid | `None -> aux `Vid rest_media
-      | `Img | `All -> `All )
-    | { typ = `None } :: rest_media -> aux acc rest_media
+    | file :: rest_media -> (
+      match extract_type file with
+      | `Img -> 
+        ( match acc with 
+          | `Img | `None -> aux `Img rest_media
+          | `Vid | `All -> `All ) 
+      | `Vid -> 
+        ( match acc with 
+          | `Vid | `None -> aux `Vid rest_media
+          | `Img | `All -> `All )
+      | `All -> `All
+      | _ -> aux acc rest_media
+    )
     | _ -> acc
   in aux `None media
 
-let search_exts exts ~settings = 
+let search_aux search_subdir ~(settings:Rc2.device_config) = 
   let s = settings in
-  let subdir = ( s.mount_path /: s.search_subdir ) in (
-    match File.is_dir subdir with 
+  let subdir, recurse = match search_subdir with
+    | `Recurse s -> s, true
+    | `Only s -> s, false in
+  let dir = ( s.mount_path /: subdir ) in (
+    match File.is_dir dir with 
     | true ->
       StateResult.Infix.(
-        ((Result.catch (traverse_tree ~exts) subdir), settings)
-        >>= (fun media_enum ~settings -> 
+        ((Result.catch (
+             traverse_tree
+               ~recurse
+               ~image_exts:s.image_exts
+               ~image_meta_exts:s.image_meta_exts
+               ~video_exts:s.video_exts
+               ~video_meta_exts:s.video_meta_exts
+           ) dir), settings)
+        >>= (fun ~settings media_enum -> 
             let media_list = List.of_enum media_enum in
-            let settings =
-              { settings with 
-                types_to_transfer = which_media_types media_list
-              }
+            let types_to_transfer =
+              which_media_types
+                (fun file -> file.typ)
+                media_list
             in 
             match media_list with 
             | [] -> 
@@ -117,45 +173,78 @@ let search_exts exts ~settings =
                   [ "No media files present in the specified";
                     "device subfolder - aborting." ];
                 ((Bad MediaNotPresent), settings) )
-            | file_list -> ((Ok file_list), settings) ))
+            | file_list -> ((Ok (file_list, types_to_transfer)), settings)))
 
+    (*goto should we really fail here? - 
+      maybe yes, but atleast inform user*)
     | false -> 
       ( Msg.term `Error "media search"
-          [ "The device directory '"; subdir; "', does not";
+          [ "The device directory '"; dir; "', does not";
             "exist - aborting." ];
         ((Bad DeviceFolderNonExistent), settings) ))
 
 
-let search () ~settings = 
-  match settings.types_to_transfer with
-  | `Img -> search_exts {exts_std with vids = []} ~settings
-  | `Vid -> search_exts {exts_std with imgs = []} ~settings
-  | `All -> search_exts exts_std ~settings
-  | `None -> (Bad MediaNotPresent), settings
+module S = StateResult.Settings
+open StateResult.Infix
 
+(*goto use/make a version of monad that doesn't give settings as arg?*)
+let search ~(settings:Rc2.device_config) () =
+  let join_files_and_types acc subdir =
+    acc
+    >>= fun ~settings (acc_files, acc_types) -> 
+    (search_aux subdir ~settings)
+    >>= fun ~settings (files, types) -> 
+    Ok (files @ acc_files, types :: acc_types), settings
+  in
+  let init = (Ok ([], []), settings) in
+  List.fold_left join_files_and_types
+    init
+    settings.search_subdirs
+  >>= fun ~settings (files, types_to_transfer_list) ->
+  let types_to_transfer = 
+    types_to_transfer_list
+    |> which_media_types (fun t -> t)
+  in (Ok files, { settings with types_to_transfer })
+  
 
-let copy_with ~settings file = 
-  (Sys.command 
-     (String.concat " " 
-        [ "cp"; file.path; (concat_title file.typ ~settings) ] ))
+let copy_file ~settings file =
+  let error str =
+    Msg.term `Error ("copy file:"^file.path) 
+        [ "An error '"; str;
+          "' from program 'cp' occured while ";
+          "trying to copy the file." ]
+  in
+  List.fold_left_result (fun return_code filename ->
+      match return_code with
+      | 0 -> 
+        Result.catch (fun fn ->
+            Sys.command @@
+            String.concat " " [ "cp"; file.path; fn ]
+          )
+          filename
+      | error_code -> Bad MediaCopyFailure
+    )
+    0
+    (concat_titles file.typ ~settings)
   |> function
-      | 0 -> Ok ()
-      | err -> begin
-        Msg.term `Error ("copy file:"^file.path) 
-          [ "An error '"; String.of_int err; 
-            "' from program 'cp' occured while ";
-            "trying to copy the file." ];
-        Bad MediaCopyFailure
-      end
+  | Ok 0 -> Ok ()
+  | Ok n ->
+    error @@ Int.to_string n;
+    Bad MediaCopyFailure
+  | Bad exn -> 
+    error @@ Printexc.to_string exn;
+    Bad MediaCopyFailure
 
-let transfer media ~settings = 
+
+let transfer ~settings media () =
+  let open BatResult.Infix in
   let full_size = 
     List.fold_left (fun acc file -> acc + file.size) 0 media 
   in 
   let result_copy = 
     List.fold_left_result (fun trans_size file -> 
       Msg.progress full_size trans_size file;
-      copy_with ~settings file 
+      copy_file ~settings file 
       >>= fun () -> 
       Ok (trans_size + file.size)
     ) 0 media 
@@ -164,29 +253,43 @@ let transfer media ~settings =
   in
   result_copy >>= fun _ -> Ok media
 
-let remove ~settings media = 
-  match settings.remove_media with
-  | false -> Ok ()
-  | true  -> 
-    (match media with 
-    | [] -> Ok ()
-    | _  -> 
-      (Sys.command 
-         (String.concat " " 
-            ("rm" :: 
-                (List.map (fun file -> file.path) 
-                   media))))
+(*warning: now doesn't check for remove media setting*)
+let remove files ~recursive = 
+  match files with 
+  | [] -> Ok ()
+  | _  -> 
+    Sys.command @@
+    String.concat " " (
+      List.flatten @@
+      ["rm"] ::
+      (if recursive then ["-rf"] else []) ::
+      [ files ]
+    )
     |> function
-        | 0 -> 
-          ( Msg.term `Notif "remove media"
-              [ "Media was succesfully removed ";
-                "from device." ];
-            Ok () )
-        | errcode -> 
-          ( Msg.term `Error "remove media"
-              [ "Something went wrong while removing ";
-                "media from the device - errorcode from ";
-                "command 'rm' was '"; String.of_int errcode;
-                "'." ];
-            Bad RemoveFailure ))
+    | 0 -> 
+      ( Msg.term `Notif "remove media"
+          [ "Media was succesfully removed ";
+            "from device." ];
+        Ok () )
+    | errcode -> 
+      ( Msg.term `Error "remove media"
+          [ "Something went wrong while removing ";
+            "media from the device - errorcode from ";
+            "command 'rm' was '"; String.of_int errcode;
+            "'." ];
+        Bad RemoveFailure )
+
+let cleanup media ~settings () =
+  match settings.cleanup with
+  | `None -> Ok ()
+  | `Remove_originals ->
+    let media_files = List.map (fun {path} -> path) media
+    in remove media_files ~recursive:false
+  | `Format ->
+    let files_at_mount =
+      Sys.readdir settings.mount_path
+      |> Array.to_list
+    in remove files_at_mount ~recursive:true
+  
+
 
