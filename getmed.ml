@@ -25,16 +25,18 @@ open Rc2.T
 open StateResult.Infix
 module S = StateResult.Settings
 
-let handle_errors_and_unmount = function 
-  | ((Ok _), _) -> 
+let handle_errors = function 
+  | ((Ok _), settings) -> 
     ( Msg.term `Notif "main" [ "Getmed ran succesfully." ];
-      Ok () )
+      Ok (), settings)
   | ((Bad (BeforeMounting exn )), _ ) -> raise exn
   | ((Bad exn_after_mounting), settings) ->
-    ((match settings.unmount with 
-    | true  -> ( Dev.unmount ~settings |> ignore )
-    | false -> () );
-     raise exn_after_mounting )
+    begin
+      ( match settings.unmount with 
+        | true  -> Dev.unmount ~settings |> ignore
+        | false -> () );
+      raise exn_after_mounting
+    end
 
 (* goto rewrite all modules to use rresult? 
    (if yes, do after it all works again) *)
@@ -44,7 +46,8 @@ let handle_errors_and_unmount = function
     . think
 *)
 let handle_devices () ~settings =
-  let rec aux = function
+  let rec aux ~settings devices () =
+    match devices with
     | [] -> Ok (), settings
     | dev :: tl -> begin
         StateResult.return () ~settings:dev
@@ -61,14 +64,15 @@ let handle_devices () ~settings =
         >> (S.read @@ Media.transfer media)
         >> (S.read @@ Media.cleanup media)
         >> (S.read @@ Dev.unmount)
-        |> handle_errors_and_unmount
+        |> handle_errors
         >>= aux tl
       end in
   aux settings.devices
 
 
-
 (**Run `getmed with super-user rights (for blkid and mounting)*)
+(*< goto there exist a way to get blkid without su-rights *)
+(* goto lookup way to mount with user without su-rights *)
 
 let getmed ~settings ~cmdline_args = 
   begin 
