@@ -105,7 +105,7 @@ let handle_all () =
 open Rc2
 
 (*goto why did I use fold_left_result.. *)
-let update () ~cmdline_args ~settings = 
+let update ~args ~settings () = 
   (List.fold_left_result (fun settings_acc arg -> 
        match arg with 
        | `Append_title s ->
@@ -116,7 +116,7 @@ let update () ~cmdline_args ~settings =
          Ok { settings_acc with devices } 
        | `Debug b ->
          Ok { settings_acc with debug = b }
-     ) settings cmdline_args)
+     ) settings args)
   |> function
   | Ok settings -> (Ok ()), settings
   | (Bad _) as bad -> bad, settings
