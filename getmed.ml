@@ -25,38 +25,56 @@ open Rc2.T
 open StateResult.Infix
 module S = StateResult.Settings
 
+(* goto rewrite all modules to use rresult? *)
+
+
 let handle_errors = function 
-  | ((Ok _), settings) -> 
-    ( Msg.term `Notif "main" [ "Getmed ran succesfully." ];
-      Ok (), settings)
-  | ((Bad (BeforeMounting exn )), _ ) -> raise exn
-  | ((Bad exn_after_mounting), settings) ->
+  | ((Ok _), dev) -> 
+    ( Msg.term `Notif "handle_errors" [
+          "Getmed ran succesfully for device '"; dev.name;"'."
+        ];
+      Ok ())
+  | ((Bad (BeforeMounting exn )), dev) ->
     begin
-      ( match settings.unmount with 
-        | true  -> Dev.unmount ~settings |> ignore
+      Msg.term `Error "handle_errors" [
+        "Getmed failed on device '"; dev.name; "' with the ";
+        "error: "
+      ];
+      raise exn
+    end
+  | ((Bad exn_after_mounting), dev) ->
+    begin
+      ( match dev.unmount with 
+        | true  -> Dev.unmount ~settings:dev |> ignore
         | false -> () );
+      Msg.term `Error "handle_errors" [
+        "Getmed failed on device '"; dev.name; "' with the ";
+        "error: "
+      ];
       raise exn_after_mounting
     end
 
-(* goto rewrite all modules to use rresult? 
-   (if yes, do after it all works again) *)
+let bind_result f v = Result.Monad.bind v f 
 
 (*>goto 
   . make bind automatically catch exceptions?
     . think
 *)
-let handle_devices ~settings () =
-  let rec aux ~settings devices () =
+let handle_devices ~(settings:Rc2.config) () =
+  let rec loop devices () =
     match devices with
-    | [] -> Ok (), settings
-    | dev :: tl -> begin
-        StateResult.return () ~settings:dev
+    | [] -> Ok ()
+    | dev :: tl ->
+      begin
+        StateResult.return ~settings:dev ()
+        >>? Rc2.print_dev_config ~debug:settings.debug          
+
         >>= Dev.find 
         >>= Dev.mount_smartly
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
 
         >>= Media.search 
-        >>? Rc2.print_if_debug
+        >>? Rc2.print_dev_config ~debug:settings.debug
 
         >>= fun ~settings media -> 
         StateResult.return () ~settings
@@ -64,31 +82,33 @@ let handle_devices ~settings () =
         >> (S.read @@ Media.transfer media)
         >> (S.read @@ Media.cleanup media)
         >> (S.read @@ Dev.unmount)
-        |> handle_errors
-        >>= aux tl
-      end in
-  aux settings.devices
+      end
+      |> handle_errors
+      |> bind_result (loop tl)
+  in
+  loop settings.devices ()
 
+let print_success ~settings () = Ok (
+    Msg.term `Notif "getmed" [
+      "Getmed ran succesfully for all devices."
+    ]
+  ), settings  
 
 (**Run `getmed with super-user rights (for blkid and mounting)*)
 (*< goto there exist a way to get blkid without su-rights *)
 (* goto lookup way to mount with user without su-rights *)
 
-let getmed ~settings ~cmdline_args = 
-  begin 
-    StateResult.return ~settings ()
-    >>= S.lift Rc2.find 
-    >>= Rc2.update
-    (*goto make rc be in a wrapper with extra fields - check zim?*)
-    >>= Rc2.update_cli ~args:cmdline_args
-    >>? Rc2.print_if_debug
-    >>= handle_devices
-  end |> handle_result
-
+let getmed ~(settings:Rc2.config) ~cli_args = 
+  StateResult.return ~settings ()
+  >>= (S.lift Rc2.find)
+  >>= Rc2.update
+  >>= Args.update ~args:cli_args
+  >>= (S.read handle_devices)
+  >>= print_success
 
 let _ = 
   getmed 
     ~settings:(Rc2.std)
-    ~cmdline_args:(Args.handle_all ())
+    ~cli_args:(Args.handle_all ())
 
 
