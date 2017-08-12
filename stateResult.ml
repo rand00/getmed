@@ -21,7 +21,7 @@ let run f (result, settings) =
   | Ok _ -> f ~settings ()
   | (Bad _) as bad -> (bad, settings)
 
-let read f v = ignore (f v); v
+let read f v = f v; v
 
 let bind_result f (result, settings) = 
   match result with 
