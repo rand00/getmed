@@ -105,7 +105,12 @@ let example = {
   unmount = true;
 }
 
-let std = {
+let std : T.config = {
+  debug = false;
+  devices = [];
+}
+
+let foo = {
   name = "std-camera";
   active = true;
   device_match = [ `Label "EOS_*" ];
@@ -157,10 +162,15 @@ let update ~settings file =
       (BatResult.Bad (RcParseError e), settings)
 
     (* failwith "todo" *)
-
+(*
 let update_one_dev arg dev =
   match arg with
-  | `Folders_append s -> { dev with folders_append = s }
+  | `Append_title s -> { dev with folders_append = s }
+  | _ -> dev 
+
+let update_config arg config =
+  match arg with
+  | `Debug 
 
 let update_one_arg rc arg = List.map (update_one_dev arg) rc
 
@@ -170,10 +180,10 @@ let update_cli ~args ~settings () =
   BatResult.Ok (),
   { settings with
     devices = update_cli_aux settings.devices args }
-
+*)
 (*goo update_cli with lift*) 
 
-
+(*goto implement*)
 let get_template : unit -> string
   = fun () ->
     failwith "todo"
@@ -183,7 +193,13 @@ let to_string config =
   |> config_to_yojson
   |> Yojson.Safe.to_string
 
-let print_if_debug pass_on ~settings = 
+let device_config_to_string config =
+  config
+  |> device_config_to_yojson
+  |> Yojson.Safe.to_string
+
+(*not used for now*)
+let print_if_debug ~settings pass_on = 
   let () = match settings.debug with 
     | false -> ()
     | true -> 
@@ -191,9 +207,19 @@ let print_if_debug pass_on ~settings =
       let print_frame s = 
         print_endline 
           (String.concat "\n" [ sep; s; sep ]) in
-      print_frame (to_string settings)  (*goo*)
-  in Ok (pass_on)
+      print_frame (to_string settings) 
+  in ()
 
+let print_dev_config ~debug (pass_on, settings) = 
+  let () = match debug with 
+    | false -> ()
+    | true -> 
+      let sep = (String.make 35 '>') in
+      let print_frame s = 
+        print_endline 
+          (String.concat "\n" [ sep; s; sep ]) in
+      print_frame (device_config_to_string settings)
+  in ()
 
 (*
 let _ =
