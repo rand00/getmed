@@ -1,11 +1,11 @@
 
 true: \
   thread, \
-  package(batteries,text,text.pcre,textwrap, pcre)
+  package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime,batteries,text,text.pcre,textwrap, pcre)
 
-<rc.*> or <dev.*> or <lib_batext/**>: \
+<dev.*> or <lib_batext/**>: \
   syntax(camlp4o), \
   package(text.pcre-syntax)
 
-<rc2.*>: \
-  package(yojson, ppx_deriving_yojson)
+#<rc2.ml>: \
+#  package(ppx_deriving_yojson)
