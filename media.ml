@@ -235,6 +235,11 @@ let copy_file ~settings file =
     error @@ Printexc.to_string exn;
     Bad MediaCopyFailure
 
+let map_result f v = BatResult.Monad.(
+    bind v @@ return%f
+  )
+
+let (>|=) v f = map_result f v 
 
 let transfer ~settings media () =
   let open BatResult.Infix in
@@ -244,9 +249,8 @@ let transfer ~settings media () =
   let result_copy = 
     List.fold_left_result (fun trans_size file -> 
       Msg.progress full_size trans_size file;
-      copy_file ~settings file 
-      >>= fun () -> 
-      Ok (trans_size + file.size)
+      copy_file ~settings file >|= fun () -> 
+      trans_size + file.size
     ) 0 media 
   in 
   let _ = print_endline "" 
@@ -285,7 +289,7 @@ let cleanup media ~settings () =
   | `Remove_originals ->
     let media_files = List.map (fun {path} -> path) media
     in remove media_files ~recursive:false
-  | `Format ->
+  | `Format -> (*goto bette to really format for flash health? *)
     let files_at_mount =
       Sys.readdir settings.mount_path
       |> Array.to_list
