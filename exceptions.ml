@@ -26,6 +26,7 @@ exception DeviceNotPresent
 
 (*mounting*)
 exception MountFolderNotEmpty
+exception MountFolderIsNotADirectory
 exception MountError
 exception UnMountFailure
 

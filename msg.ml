@@ -66,10 +66,28 @@ let term typ title ss =
       (termwrap ss) ]
   |> print_endline
 
+let human_readable_bytes bytes =
+  let r p = float @@ Int.pow 10 p in
+  let kb = r 3
+  and mb = r 6
+  and gb = r 9
+  and tb = r 12
+  and bytes = float bytes
+  in
+  let amount, category =
+    if bytes > tb then bytes /. tb, "TB"
+    else if bytes > gb then bytes /. gb, "GB"
+    else if bytes > mb then bytes /. mb, "MB"
+    else if bytes > kb then bytes /. kb, "KB"
+    else bytes, "B"
+  in Printf.sprintf "%.0f%s" amount category 
+
 let progress full_size trans_size file = 
   let open Media_types in begin
-    Printf.printf "[%10d / %10d] Transferring '%35s'  [%15s]\r" 
-      (trans_size+file.size) full_size file.path 
+    Printf.printf "[%4s / %4s] Transferring '%35s'  [%15s]\r" 
+      (human_readable_bytes (trans_size+file.size))
+      (human_readable_bytes full_size)
+      file.path
       (String.make (((Float.of_int trans_size) 
                      /. (Float.of_int full_size)) *. 15. 
                        |> Int.of_float) '|' );

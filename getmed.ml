@@ -67,7 +67,6 @@ let handle_devices ~(settings:Rc2.config) () =
     | dev :: tl ->
       begin
         StateResult.return ~settings:dev ()
-        >>? Rc2.print_dev_config ~debug:settings.debug          
 
         >>= Dev.find 
         >>= Dev.mount_smartly
@@ -78,10 +77,10 @@ let handle_devices ~(settings:Rc2.config) () =
 
         >>= fun ~settings media -> 
         StateResult.return () ~settings
-        >> (S.read @@ Media.dirs_fix)
-        >> (S.read @@ Media.transfer media)
-        >> (S.read @@ Media.cleanup media)
-        >> (S.read @@ Dev.unmount)
+        >> S.read @@ Media.dirs_fix
+        >> S.read @@ Media.transfer media
+        >> S.read @@ Media.cleanup media
+        >> S.read @@ Dev.unmount
       end
       |> handle_errors
       |> bind_result (loop tl)
@@ -100,10 +99,10 @@ let print_success ~settings () = Ok (
 
 let getmed ~(settings:Rc2.config) ~cli_args = 
   StateResult.return ~settings ()
-  >>= (S.lift Rc2.find)
-  >>= Rc2.update
-  >>= Args.update ~args:cli_args
-  >>= (S.read handle_devices)
+  >>= S.lift Rc2.find
+  >>= Rc2.read_from_file
+  >>= Args.update_rc cli_args
+  >>= S.read handle_devices
   >>= print_success
 
 let _ = 

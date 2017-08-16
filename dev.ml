@@ -93,10 +93,15 @@ let mountpoint_fix_or_find dev dir =
         | _ -> 
           ( Msg.term `Error "fix mountpoint"
               [ "The given mount-folder is not empty. ";
-                "Choosing not to mount and choosing to exit."];
+                "Exiting."];
             Bad MountFolderNotEmpty )
+      else if Sys.file_exists dir && not (Sys.is_directory dir) then
+        ( Msg.term `Error "fix mountpoint"
+              [ "The given mount-folder exists, but is not a ";
+                "directory. Exiting."];
+            Bad MountFolderIsNotADirectory )
       else (*if dir does not exist*) 
-        ( Msg.term `Notif "mountp_fix"
+        ( Msg.term `Notif "fix mountpoint"
             [ "Mount-point \""; dir; "\" "; 
               "does not exist - creating it now." ];
           Unix.mkdir dir 0o755;

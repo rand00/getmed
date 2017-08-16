@@ -105,7 +105,7 @@ let handle_all () =
 open Rc2
 
 (*goto why did I use fold_left_result.. *)
-let update ~args ~settings () = 
+let update_rc args ~settings () = 
   (List.fold_left_result (fun settings_acc arg -> 
        match arg with 
        | `Append_title s ->

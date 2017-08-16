@@ -149,7 +149,7 @@ let find () =
 type file_path = string
   
 (*goto continue writing interface*)
-let update ~settings file =
+let read_from_file ~settings file =
     Yojson.Safe.from_file file
     |> config_of_yojson
     |> function
