@@ -317,10 +317,9 @@ let cleanup media ~settings () =
   | `Remove_originals ->
     let media_files = List.map (fun {path} -> path) media
     in remove media_files ~recursive:false
-  | `Format -> (*goto bette to really format for flash health? *)
+  | `Format -> (*goto better to really format for flash health? *)
     let files_at_mount =
-      Sys.readdir settings.mount_path
-      |> Array.to_list
+      Sys.readdir settings.mount_path |> Array.to_list
     in remove files_at_mount ~recursive:true
   
 
