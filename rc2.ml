@@ -85,9 +85,9 @@ let folder_prefix settings =
 let template_rc = {
   name = "camera-name";
   active = true;
-  device_match = [ `Label "DEVICE_LABEL_WITH_WILDCARD" ];
-  mount_path = "/mount/path";
-  search_subdirs = [ `Recurse "/folders/within/device/to/search" ];
+  device_match = [ `Label "DEVICE-LABEL-REGEX" ];
+  mount_path = "/place/to/mount/device";
+  search_subdirs = [ `Recurse "/subtree/within/device/to/search" ];
   types_to_transfer = `All;
   
   image_exts = [ "jpg"; "cr2"; "arw"; ];
