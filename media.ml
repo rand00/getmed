@@ -87,6 +87,15 @@ let make_extensions
     video_meta_exts;
   }
 
+let lowercase_extensions es =
+  let l ss = List.map String.lowercase ss in
+  {
+    image_exts = l es.image_exts;
+    image_meta_exts = l es.image_meta_exts;
+    video_exts = l es.video_exts;
+    video_meta_exts = l es.video_meta_exts;
+  }
+
 let filter_extensions_by_rc settings =
   let s = settings in 
   match settings.types_to_transfer with
@@ -116,7 +125,6 @@ let exts_std = {
   video_meta_exts = [ "log"; "xml" ];
 }
 
-
 (*gomaybe generalize into RaUtil *)
 (*goto test!*)
 let rec traverse_tree
@@ -142,8 +150,10 @@ let rec traverse_tree
   in
   let image_files = filter_files `Img e.image_exts
   and video_files = filter_files `Vid e.video_exts in
-  let image_meta_files = filter_meta `Img_meta image_files e.image_meta_exts
-  and video_meta_files = filter_meta `Vid_meta video_files e.video_meta_exts
+  let image_meta_files =
+    filter_meta `Img_meta image_files e.image_meta_exts
+  and video_meta_files =
+    filter_meta `Vid_meta video_files e.video_meta_exts
   in
   let nested_files = (files //@ fun elem -> 
       let path =  ( dir /: elem ) in
@@ -191,7 +201,10 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
         ((Result.catch (
              traverse_tree
                ~recurse
-               ~extensions:(filter_extensions_by_rc settings)
+               ~extensions:(
+                 filter_extensions_by_rc settings
+                 |> lowercase_extensions
+               )
            ) dir), settings)
         >>= (fun ~settings media_enum -> 
             let media_list = List.of_enum media_enum in
