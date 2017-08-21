@@ -34,12 +34,12 @@ let handle_all () =
     String.make 
       (arg_parse_std + (String.length arg) + extra_indent) ' '
   in
-  let std_rc_arg = "--std-rc"
+  let template_rc_arg = "--template-rc"
   and append_short_arg = "-a"
   and append_long_arg = "--append"
   and debug_arg = "--debug"
   in
-  let std_rc_indent = make_indent std_rc_arg
+  let std_rc_indent = make_indent template_rc_arg
   and append_short_indent = make_indent ~extra_indent:7 append_short_arg
   and append_long_indent = make_indent ~extra_indent:7 append_long_arg
   and debug_indent = make_indent ~extra_indent:7 debug_arg
@@ -64,7 +64,7 @@ let handle_all () =
           ~subsequent_indent:append_long_indent
           ~initial_nonwrap:(String.length append_long_indent)
           [ append_title_doc ] );
-      ( std_rc_arg, 
+      ( template_rc_arg, 
         Arg.Unit (fun () -> 
           Rc2.get_template () 
           |> print_endline; 
@@ -106,17 +106,16 @@ open Rc2
 
 (*goto why did I use fold_left_result.. *)
 let update_rc args ~settings () = 
-  (List.fold_left_result (fun settings_acc arg -> 
-       match arg with 
-       | `Append_title s ->
-         let devices =
-           List.map (fun d -> { d with folders_append = s })
-             settings_acc.devices
-         in
-         Ok { settings_acc with devices } 
-       | `Debug b ->
-         Ok { settings_acc with debug = b }
-     ) settings args)
+  List.fold_left_result (fun settings_acc -> function 
+      | `Append_title s ->
+        let devices =
+          List.map (fun d -> { d with folders_append = s })
+            settings_acc.devices
+        in
+        Ok { settings_acc with devices } 
+      | `Debug b ->
+        Ok { settings_acc with debug = b }
+    ) settings args
   |> function
   | Ok settings -> (Ok ()), settings
   | (Bad _) as bad -> bad, settings

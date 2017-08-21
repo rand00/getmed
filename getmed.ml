@@ -61,21 +61,22 @@ let bind_result f v = Result.Monad.bind v f
     . think
 *)
 let handle_devices ~(settings:Rc2.config) () =
+  let outer_settings = settings in
   let rec loop devices () =
     match devices with
     | [] -> Ok ()
     | dev :: tl ->
       begin
         StateResult.return ~settings:dev ()
-
         >>= Dev.find 
         >>= Dev.mount_smartly
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
 
         >>= Media.search 
-        >>? Rc2.print_dev_config ~debug:settings.debug
+        >>? Rc2.print_dev_config ~debug:outer_settings.debug
 
         >>= fun ~settings media -> 
+
         StateResult.return () ~settings
         >> S.read @@ Media.dirs_fix
         >> S.read @@ Media.transfer media

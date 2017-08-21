@@ -82,7 +82,7 @@ let folder_prefix settings =
     | `String s -> s
     | `Nothing -> ""
 
-let example = {
+let template_rc = {
   name = "camera-name";
   active = true;
   device_match = [ `Label "DEVICE_LABEL_WITH_WILDCARD" ];
@@ -183,20 +183,21 @@ let update_cli ~args ~settings () =
 *)
 (*goo update_cli with lift*) 
 
-(*goto implement*)
-let get_template : unit -> string
-  = fun () ->
-    failwith "todo"
-
 let to_string config =
   config 
   |> config_to_yojson
-  |> Yojson.Safe.to_string
+  |> Yojson.Safe.pretty_to_string
 
 let device_config_to_string config =
   config
   |> device_config_to_yojson
-  |> Yojson.Safe.to_string
+  |> Yojson.Safe.pretty_to_string
+
+(*goto implement*)
+let get_template : unit -> string
+  = fun () ->
+    { std with devices = [template_rc] }
+    |> to_string
 
 (*not used for now*)
 let print_if_debug ~settings pass_on = 
