@@ -38,8 +38,13 @@ let concat_titles ~settings typ =
     (List.flatten
        [ [ root; "/"; Rc2.folder_prefix s; ];
          ( match s.folders_append with
-         | "" -> [ "" ] 
-         | _  -> [ "_"; s.folders_append ])])
+           | "" -> [ "" ] 
+           | _  -> [ "_"; s.folders_append ]);
+         ( match s.folders_append_cam_name with
+           | false -> [ "" ] 
+           | true  -> [ "_"; s.name ])
+       ]
+    )
   in match typ with 
   | `Img -> List.map c s.image_destinations
   | `Vid -> List.map c s.video_destinations

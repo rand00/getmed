@@ -49,6 +49,7 @@ module T = struct
       same folder
     *)
     folders_append : string;
+    folders_append_cam_name : bool;
     (*gomaybe later would be useful to have time as well?*)
     folders_prepend : [ `Date | `String of string | `Nothing ];
 
@@ -96,6 +97,7 @@ let template_rc = {
   video_meta_exts = [ "xml" ];
 
   folders_append = "folder_appended_title";
+  folders_append_cam_name = false;
   folders_prepend = `String "folder_prepend_string";
 
   image_destinations = [ "/image/root/destinations" ];
@@ -124,6 +126,7 @@ let foo = {
   video_meta_exts = [ "xml"; "log" (*magick lantern*) ];
 
   folders_append = "";
+  folders_append_cam_name = false;  
   folders_prepend = `Date;
 
   image_destinations = [ "$HOME/Pictures/getmed/" ];
