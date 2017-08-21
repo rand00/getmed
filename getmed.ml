@@ -65,7 +65,7 @@ let handle_devices ~(settings:Rc2.config) () =
   let rec loop devices () =
     match devices with
     | [] -> Ok ()
-    | dev :: tl ->
+    | dev :: tl when dev.active ->
       begin
         StateResult.return ~settings:dev ()
         >>= Dev.find 
