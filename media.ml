@@ -120,7 +120,7 @@ let rec traverse_tree
     dir
   =
   let e = extensions in
-  let is_ext ext_def path = List.mem (File.ext path) e.image_exts in
+  let is_ext extensions path = List.mem (File.ext path) extensions in
   let save path typ = 
     Some {path; typ; size = (Unix.stat path).Unix.st_size}
   in
