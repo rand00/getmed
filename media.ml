@@ -63,27 +63,64 @@ let dirs_fix ~settings () =
 
 
 type extensions = {
-  imgs : string list;
-  vids : string list;
+  image_exts : string list;
+  image_meta_exts : string list;
+  video_exts : string list;
+  video_meta_exts : string list;
 }
 
+let make_extensions
+    ?(image_exts=[])
+    ?(image_meta_exts=[])
+    ?(video_exts=[])
+    ?(video_meta_exts=[])
+    () =
+  {
+    image_exts;
+    image_meta_exts;
+    video_exts;
+    video_meta_exts;
+  }
+
+let filter_extensions_by_rc settings =
+  let s = settings in 
+  match settings.types_to_transfer with
+  | `None -> make_extensions ()
+  | `Img ->
+    make_extensions
+      ~image_exts:s.image_exts
+      ~image_meta_exts:s.image_meta_exts
+      ()
+  | `Vid ->
+    make_extensions
+      ~video_exts:s.video_exts
+      ~video_meta_exts:s.video_meta_exts
+      ()
+  | `All ->
+    make_extensions
+      ~image_exts:s.image_exts
+      ~image_meta_exts:s.image_meta_exts
+      ~video_exts:s.video_exts
+      ~video_meta_exts:s.video_meta_exts
+      ()
+
 let exts_std = {
-  imgs = [ "jpg"; "jpeg"; "cr2" ];
-  vids = [ "mov"; "log" ] (*'log' for magick lantern metadata*)
+  image_exts = [ "jpg"; "jpeg"; "cr2"; "arw" ];
+  image_meta_exts = [ "xmp" ];
+  video_exts = [ "mov"; "avi" ];
+  video_meta_exts = [ "log"; "xml" ];
 }
 
 
 (*gomaybe generalize into RaUtil *)
 (*goto test!*)
 let rec traverse_tree
-    ~image_exts
-    ~image_meta_exts
-    ~video_exts
-    ~video_meta_exts
+    ~extensions
     ~recurse
     dir
   =
-  let is_ext ext_def path = List.mem (File.ext path) image_exts in
+  let e = extensions in
+  let is_ext ext_def path = List.mem (File.ext path) e.image_exts in
   let save path typ = 
     Some {path; typ; size = (Unix.stat path).Unix.st_size}
   in
@@ -98,21 +135,15 @@ let rec traverse_tree
       filter_files meta_type extensions
     else Enum.empty ()
   in
-  let image_files = filter_files `Img image_exts
-  and video_files = filter_files `Vid video_exts in
-  let image_meta_files = filter_meta `Img_meta image_files image_meta_exts
-  and video_meta_files = filter_meta `Vid_meta video_files video_meta_exts
+  let image_files = filter_files `Img e.image_exts
+  and video_files = filter_files `Vid e.video_exts in
+  let image_meta_files = filter_meta `Img_meta image_files e.image_meta_exts
+  and video_meta_files = filter_meta `Vid_meta video_files e.video_meta_exts
   in
   let nested_files = (files //@ fun elem -> 
       let path =  ( dir /: elem ) in
       if File.is_dir path && recurse then 
-        Some (traverse_tree path
-                ~image_exts
-                ~image_meta_exts
-                ~video_exts
-                ~video_meta_exts
-                ~recurse
-             )
+        Some (traverse_tree path ~extensions ~recurse)
       else None
     ) |> Enum.flatten
   in List.enum [
@@ -155,10 +186,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
         ((Result.catch (
              traverse_tree
                ~recurse
-               ~image_exts:s.image_exts
-               ~image_meta_exts:s.image_meta_exts
-               ~video_exts:s.video_exts
-               ~video_meta_exts:s.video_meta_exts
+               ~extensions:(filter_extensions_by_rc settings)
            ) dir), settings)
         >>= (fun ~settings media_enum -> 
             let media_list = List.of_enum media_enum in

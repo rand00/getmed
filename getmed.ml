@@ -64,7 +64,6 @@ let handle_devices ~(settings:Rc2.config) () =
   let outer_settings = settings in
   let rec loop devices () =
     match devices with
-    | [] -> Ok ()
     | dev :: tl when dev.active ->
       begin
         StateResult.return ~settings:dev ()
@@ -85,6 +84,7 @@ let handle_devices ~(settings:Rc2.config) () =
       end
       |> handle_errors
       |> bind_result (loop tl)
+    | _ -> Ok ()
   in
   loop settings.devices ()
 
