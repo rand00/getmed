@@ -29,7 +29,7 @@ let create_if_nonexistent folder =
     | true  -> 
       ( Msg.term `Notif "create media directory"
           [ "The specified folder '"; folder; "' already exists - ";
-            "going to use this and prompt you if any files are to be";
+            "going to use this and prompt you if any files are to be ";
             "overwritten." ];
         Ok false )
     | false -> 

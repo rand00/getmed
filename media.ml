@@ -47,7 +47,9 @@ let concat_titles ~settings typ =
     )
   in match typ with 
   | `Img -> List.map c s.image_destinations
+  | `Img_meta -> List.map c s.image_destinations              
   | `Vid -> List.map c s.video_destinations
+  | `Vid_meta -> List.map c s.video_destinations
   | _ -> failwith "pass an `Img or `Vid type"
 
 
@@ -137,16 +139,22 @@ let rec traverse_tree
   let save path typ = 
     Some {path; typ; size = (Unix.stat path).Unix.st_size}
   in
-  let files = Sys.files_of dir
+  let files = Sys.files_of dir |> List.of_enum
   in
-  let filter_files mediatype extensions = files //@ fun elem -> 
-      let path = ( dir /: elem ) in
-      if is_ext extensions path then save path mediatype else None 
+  let filter_files mediatype extensions =
+    files
+    |> List.filter_map (
+      fun elem -> 
+        let path = ( dir /: elem ) in
+        if is_ext extensions path then
+          save path mediatype
+        else None
+    )
   in
   let filter_meta meta_type media_files extensions =
-    if not @@ Enum.is_empty media_files then
-      filter_files meta_type extensions
-    else Enum.empty ()
+    match media_files with
+    | [] -> []
+    | _ -> filter_files meta_type extensions
   in
   let image_files = filter_files `Img e.image_exts
   and video_files = filter_files `Vid e.video_exts in
@@ -155,20 +163,21 @@ let rec traverse_tree
   and video_meta_files =
     filter_meta `Vid_meta video_files e.video_meta_exts
   in
-  let nested_files = (files //@ fun elem -> 
+  let nested_files = 
+    files
+    |> List.filter_map (fun elem -> 
       let path =  ( dir /: elem ) in
       if File.is_dir path && recurse then 
         Some (traverse_tree path ~extensions ~recurse)
-      else None
-    ) |> Enum.flatten
-  in List.enum [
+      else None )
+    |> List.flatten
+  in List.flatten [
     image_files;
     image_meta_files;
     video_files;
     video_meta_files;
     nested_files;
   ]
-  |> Enum.flatten
                   
 
 let which_media_types extract_type media = 
@@ -206,8 +215,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
                  |> lowercase_extensions
                )
            ) dir), settings)
-        >>= (fun ~settings media_enum -> 
-            let media_list = List.of_enum media_enum in
+        >>= (fun ~settings media_list -> 
             let types_to_transfer =
               which_media_types
                 (fun file -> file.typ)
@@ -216,7 +224,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
             match media_list with 
             | [] -> 
               ( Msg.term `Notif "media search"
-                  [ "No media files present in the specified";
+                  [ "No media files present in the specified ";
                     "device subfolder - aborting." ];
                 ((Bad MediaNotPresent), settings) )
             | file_list -> ((Ok (file_list, types_to_transfer)), settings)))
@@ -265,7 +273,11 @@ let copy_file ~settings file =
       | 0 -> 
         Result.catch (fun fn ->
             Sys.command @@
-            String.concat " " [ "cp"; file.path; fn ]
+            String.concat " " [
+              "cp";
+              Folder.escape_spaces file.path;
+              Folder.escape_spaces fn
+            ]
           )
           filename
       | error_code -> Bad MediaCopyFailure
