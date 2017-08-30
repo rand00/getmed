@@ -349,8 +349,16 @@ let cleanup media ~settings () =
     in remove media_files ~recursive:false
   | `Format -> (*goto better to really format for flash health? *)
     let files_at_mount =
-      Sys.readdir settings.mount_path |> Array.to_list
-    in remove files_at_mount ~recursive:true
+      Sys.readdir settings.mount_path
+      |> Array.to_list
+      |> List.map (fun fn -> settings.mount_path /: fn)
+    in
+    if not @@ List.for_all Sys.file_exists files_at_mount then 
+      ( Msg.term `Error "remove media"
+          [ "Some of the files we try to remove doesn't exist." ];
+        Bad RemoveFailure )
+    else 
+      remove files_at_mount ~recursive:true
   
 
 
