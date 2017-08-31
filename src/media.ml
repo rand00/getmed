@@ -241,12 +241,11 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
 module S = StateResult.Settings
 open StateResult.Infix
 
-(*goto use/make a version of monad that doesn't give settings as arg?*)
 let search ~(settings:Rc2.device_config) () =
   let join_files_and_types acc subdir =
     acc
     >>= fun ~settings (acc_files, acc_types) -> 
-    (search_aux subdir ~settings)
+    search_aux subdir ~settings
     >>= fun ~settings (files, types) -> 
     Ok (files @ acc_files, types :: acc_types), settings
   in

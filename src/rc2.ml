@@ -148,21 +148,60 @@ let find () =
       [ (Sys.getcwd ()) /: ".getmedrc";
         (Sys.getenv "HOME") /: ".getmedrc" ] )
   with Not_found -> BatResult.Bad RcNotFound
+  (*< note: this exn matches both 'find' and 'getenv'*)
 
 type file_path = string
-  
+
+let validate_field res_ref test error_msg =
+  test || (
+    Msg.term `Error "validate rc" [
+      "Field 'name' should be a non-empty string."
+    ];
+    res_ref := BatResult.Bad RcValidationError;
+    false
+  )
+
+let validate_settings s =
+  let res_ref = ref @@ Ok () in
+  let validate_device d =
+    not d.active ||
+    validate_field res_ref
+      (d.name <> "") 
+      [ "Field 'name' should be a non-empty string." ]
+    &&
+    validate_field res_ref
+      (List.for_all 
+         (function
+           | `Uuid "" | `Label "" -> false
+           | _ -> true
+         )
+         d.device_match
+      ) 
+      [ "Field 'device_match' should contain a non-empty string." ]
+    &&
+    validate_field res_ref
+      (d.mount_path <> "") 
+      [ "Field 'mount_path' should be a non-empty string." ]
+  in
+  if List.for_all validate_device s.devices then
+    Ok ()
+  else
+    !res_ref
+
 (*goto continue writing interface*)
 let read_from_file ~settings file =
     Yojson.Safe.from_file file
     |> config_of_yojson
     |> function
-    | Result.Ok settings' ->
+    | Result.Ok settings' -> (
       Msg.term `Notif "update-rc" [
         "Sucesfully parsed config-file."
       ];
-      (BatResult.Ok (), settings')
-    | Result.Error e ->
-      (BatResult.Bad (RcParseError e), settings)
+      match validate_settings settings' with
+      | BatResult.Ok () as r -> r, settings'
+      | BatResult.Bad _ as r -> r, settings
+    )
+    | Result.Error e -> BatResult.Bad (RcParseError e), settings
 
     (* failwith "todo" *)
 (*
