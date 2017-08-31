@@ -34,16 +34,16 @@ module Infix = struct
 
   (** it's the clients responsibility to check that 'dir' is not empty*)
   let ( /: ) dir file =
-    String.concat "" @@ List.flatten [
-      [dir];
+    String.concat "" @@ [
+      dir;
       begin
         let len_dir = OText.length dir in
         if len_dir > 0 && dir.[len_dir-1] = '/' then
-          []
+          ""
         else
-          ["/"]
+          "/"
       end;
-      [remove_preslash file]
+      remove_preslash file
     ]
 
 end
