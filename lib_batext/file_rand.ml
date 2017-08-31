@@ -23,6 +23,13 @@ open Batteries
 
 include File
 
+let remove_preslash s =
+  let l = String.length s in
+  if l > 0 then match s.[0] with
+    | '/' -> String.sub s 1 (l-1) 
+    | _ -> s
+  else s
+
 module Infix = struct 
 
   (** it's the clients responsibility to check that 'dir' is not empty*)
@@ -30,13 +37,13 @@ module Infix = struct
     String.concat "" @@ List.flatten [
       [dir];
       begin
-        let len = OText.length dir in
-        if len > 0 && dir.[len-1] = '/' then
+        let len_dir = OText.length dir in
+        if len_dir > 0 && dir.[len_dir-1] = '/' then
           []
         else
           ["/"]
       end;
-      [file]
+      [remove_preslash file]
     ]
 
 end
