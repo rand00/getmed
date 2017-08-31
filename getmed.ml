@@ -18,10 +18,9 @@
 
 open Batteries
 open BatExt
-open File.Infix
 open Exceptions
-
 open Rc2.T
+open File.Infix
 open StateResult.Infix
 module S = StateResult.Settings
 

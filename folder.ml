@@ -20,7 +20,9 @@ open Batteries
 open Result.Monad
 open Exceptions
 
-let escape_spaces = Pcre.replace ~pat:" +" ~templ:"\\ "
+let escape_spaces = Pcre.replace ~pat:" " ~templ:"\\ "
+
+let escape = Printf.sprintf "'%s'"
 
 let create_if_nonexistent folder = 
   match Sys.file_exists folder with
