@@ -266,30 +266,44 @@ let search ~(settings:Rc2.device_config) () =
   
 
 let copy_file ~settings file =
+  let open BatResult.Monad in
   let error str =
     Msg.term `Error ("copy file:"^file.path) 
         [ "An error '"; str;
           "' from program 'cp' occured while ";
           "trying to copy the file." ]
   in
-  List.fold_left_result (fun () filename ->
-      Result.catch (fun fn ->
-          Sys.command @@
-          String.concat " " [
-            "cp";
-            Folder.escape file.path;
-            Folder.escape fn
-          ]
-        )
-        filename
-      |> function
-      | Ok 0 -> Ok ()
-      | Ok error_code ->
-        error @@ Int.to_string error_code;
-        Bad MediaCopyFailure
-      | Bad exn ->
-        error @@ Printexc.to_string exn;
-        Bad MediaCopyFailure
+  List.fold_left_result
+    (fun () destination_path ->
+       begin match Sys.file_exists destination_path with
+         | false -> Ok destination_path
+         | true ->
+           Msg.term `Error "copy file" [
+             "Error while trying to copy file '";
+             file.path;
+             "' - the file already exists at location '";
+             destination_path;
+             "'.";
+           ];
+           Bad MediaCopyFailure
+       end
+       >>= Result.catch (fun fn ->
+           Sys.command @@
+           String.concat " " [
+             "cp";
+             Folder.escape file.path;
+             Folder.escape fn
+           ]
+         )
+       |> function
+       | Ok 0 -> Ok ()
+       | Ok error_code ->
+         error @@ Int.to_string error_code;
+         Bad MediaCopyFailure
+       | Bad MediaCopyFailure as b -> b
+       | Bad exn ->
+         error @@ Printexc.to_string exn;
+         Bad MediaCopyFailure
     )
     ()
     (concat_titles file.typ ~settings)
