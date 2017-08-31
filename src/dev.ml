@@ -104,8 +104,12 @@ let mountpoint_fix_or_find dev dir =
         ( Msg.term `Notif "fix mountpoint"
             [ "Mount-point \""; dir; "\" "; 
               "does not exist - creating it now." ];
-          Unix.mkdir dir 0o755;
-          Ok dir_and_action )
+          try
+            Unix.mkdir dir 0o755;
+            Ok dir_and_action
+          with exn ->
+            Bad exn
+        )
 
 
 let mount dev = function

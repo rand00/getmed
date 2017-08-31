@@ -134,7 +134,6 @@ let exts_std = {
 }
 
 (*gomaybe generalize into RaUtil *)
-(*goto test!*)
 let rec traverse_tree
     ~extensions
     ~recurse
