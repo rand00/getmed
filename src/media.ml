@@ -272,30 +272,27 @@ let copy_file ~settings file =
           "' from program 'cp' occured while ";
           "trying to copy the file." ]
   in
-  List.fold_left_result (fun return_code filename ->
-      match return_code with
-      | 0 -> 
-        Result.catch (fun fn ->
-            Sys.command @@
-            String.concat " " [
-              "cp";
-              Folder.escape file.path;
-              Folder.escape fn
-            ]
-          )
-          filename
-      | error_code -> Bad MediaCopyFailure
+  List.fold_left_result (fun () filename ->
+      Result.catch (fun fn ->
+          Sys.command @@
+          String.concat " " [
+            "cp";
+            Folder.escape file.path;
+            Folder.escape fn
+          ]
+        )
+        filename
+      |> function
+      | Ok 0 -> Ok ()
+      | Ok error_code ->
+        error @@ Int.to_string error_code;
+        Bad MediaCopyFailure
+      | Bad exn ->
+        error @@ Printexc.to_string exn;
+        Bad MediaCopyFailure
     )
-    0
+    ()
     (concat_titles file.typ ~settings)
-  |> function
-  | Ok 0 -> Ok ()
-  | Ok n ->
-    error @@ Int.to_string n;
-    Bad MediaCopyFailure
-  | Bad exn -> 
-    error @@ Printexc.to_string exn;
-    Bad MediaCopyFailure
 
 let map_result f v = BatResult.Monad.(
     bind v @@ return%f
