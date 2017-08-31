@@ -28,32 +28,35 @@ let escape = Printf.sprintf "'%s'"
 
 let create_if_nonexistent folder = 
   match Sys.file_exists folder with
-  | true  -> 
-    ( match Sys.is_directory folder with 
-    | true  -> 
-      ( Msg.term `Notif "create media directory"
-          [ "The specified folder '"; folder; "' already exists - ";
-            "going to use this and prompt you if any files are to be ";
-            "overwritten." ];
-        Ok false )
-    | false -> 
-      ( Msg.term `Error "create media directory"
-          [ "The mediadirectory specified, "; folder;
-            " is not a directory." ];
-        Bad CreateFolder ))
-  | false -> ( match Sys.command ("mkdir -p "^(folder |> escape)) with
-    | 0 -> begin
-      Msg.term `Notif "create media directory"
-        [ "The folder '"; folder; "' has now been created ";
-          "for media transferring." ];
-      Ok true
-    end
-    | _ -> begin
-      Msg.term `Error "create media directory"
-        [ "The folder '"; folder; "' could not get created. ";
-          "Aborting." ];
-      Bad CreateFolder 
-    end )
+  | true  -> (
+      match Sys.is_directory folder with 
+      | true  -> 
+        ( Msg.term `Notif "create media directory"
+            [ "The specified folder '"; folder; "' already exists - ";
+              "going to use this and prompt you if any files are to be ";
+              "overwritten." ];
+          Ok false )
+      | false -> 
+        ( Msg.term `Error "create media directory"
+            [ "The mediadirectory specified, "; folder;
+              " is not a directory." ];
+          Bad CreateFolder )
+    )
+  | false -> (
+      match Sys.command ("mkdir -p "^(folder |> escape)) with
+      | 0 -> (
+          Msg.term `Notif "create media directory"
+            [ "The folder '"; folder; "' has now been created ";
+              "for media transferring." ];
+          Ok true
+        )
+      | _ -> (
+          Msg.term `Error "create media directory"
+            [ "The folder '"; folder; "' could not get created. ";
+              "Aborting." ];
+          Bad CreateFolder 
+        )
+    )
 
 
 module Name = struct 

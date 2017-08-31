@@ -82,15 +82,23 @@ let human_readable_bytes bytes =
     else bytes, "B"
   in Printf.sprintf "%.0f%s" amount category 
 
-let progress full_size trans_size file = 
-  let open Media_types in begin
-    Printf.printf "[%4s / %4s] Transferring '%35s'  [%15s]\r" 
+let progress ~full_size ~trans_size ~prev_len file = 
+  let open Media_types in
+  let f = Float.of_int in
+  let progress_len =
+    (f trans_size /. f full_size) *. 15. 
+    |> Int.of_float in
+  let progress_bar = String.make progress_len '|' in
+  let final_string =
+    Printf.sprintf "[%-15s] [%4s / %4s] Transferring '%s'  \r" 
+      progress_bar
       (human_readable_bytes (trans_size+file.size))
       (human_readable_bytes full_size)
-      file.path
-      (String.make (((Float.of_int trans_size) 
-                     /. (Float.of_int full_size)) *. 15. 
-                       |> Int.of_float) '|' );
+      file.path in
+  begin
+    print_string @@ String.make prev_len ' ' ^ "\r";
+    print_string final_string;
     flush stdout;
-  end
+  end;
+  String.length final_string
 

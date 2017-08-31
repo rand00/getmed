@@ -309,11 +309,11 @@ let transfer ~settings media () =
     List.fold_left (fun acc file -> acc + file.size) 0 media 
   in 
   let result_copy = 
-    List.fold_left_result (fun trans_size file -> 
-      Msg.progress full_size trans_size file;
-      copy_file ~settings file >|= fun () -> 
-      trans_size + file.size
-    ) 0 media 
+    List.fold_left_result (fun (trans_size, prev_len) file -> 
+        let len = Msg.progress ~full_size ~trans_size ~prev_len file in
+        copy_file ~settings file >|= fun () -> 
+        (trans_size + file.size, len)
+      ) (0, 0) media 
   in 
   let _ = print_endline "" 
   in
