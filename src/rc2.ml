@@ -257,10 +257,10 @@ let print_dev_config ~debug (pass_on, settings) =
   let () = match debug with 
     | false -> ()
     | true -> 
-      let sep = (String.make 35 '>') in
+      let sep c = (String.make 45 c) in
       let print_frame s = 
         print_endline 
-          (String.concat "\n" [ sep; s; sep ]) in
+          (String.concat "\n" [ sep '>'; s; sep '<']) in
       print_frame (device_config_to_string settings)
   in ()
 
