@@ -29,39 +29,40 @@ let termwrap
     ss = 
   String.concat "" ss
   |> (fun str -> 
-    let wrap_len = Sys.term_ncolumns () in
-    let (init_line, rest_str) = 
-      (match initial_nonwrap with
-      | 0 -> [], str
-      | n -> 
-        let str_len = String.length str in
-        let init_maxlen = (min (wrap_len - n) str_len) in
-        let init_len = 
-          (if str_len > init_maxlen then
-              String.rfind_from str (init_maxlen -1) " " 
-           else 
-              str_len )
-        in ( [ String.sub str 0 init_len ], String.lchop ~n:init_len str ))
-    in
-    let open Wrapper in
-    String.concat "\n"
-      (List.flatten
-         [ init_line;
-           rest_str |> wrap 
+      let wrap_len = Sys.term_ncolumns () in
+      let (init_line, rest_str) = 
+        (match initial_nonwrap with
+         | 0 -> [], str
+         | n -> 
+           let str_len = String.length str in
+           let init_maxlen = (min (wrap_len - n) str_len) in
+           let init_len = 
+             (if str_len > init_maxlen then
+                String.rfind_from str (init_maxlen -1) " " 
+              else 
+                str_len )
+           in ( [ String.sub str 0 init_len ], String.lchop ~n:init_len str ))
+      in
+      let open Wrapper in
+      String.concat "\n"
+        (List.flatten
+           [ init_line;
+             rest_str |> wrap 
                (make 
                   ~initial_indent 
                   ~subsequent_indent
                   ~drop_whitespace
                   ~replace_whitespace
-                  wrap_len) ]))
-    
+                  wrap_len)
+           ]))
+
 
 let term typ title ss = 
   String.concat "" 
-    [ "Getmed:";
+    [ "getmed:";
       (match typ with 
-      | `Error -> "ERROR:"
-      | `Notif -> "");
+       | `Error -> "ERROR:"
+       | `Notif -> "");
       title ^ ":\n";
       (termwrap ss) ]
   |> print_endline
@@ -90,7 +91,7 @@ let progress ~full_size ~trans_size ~prev_len file =
     |> Int.of_float in
   let progress_bar = String.make progress_len '|' in
   let final_string =
-    Printf.sprintf "[%-15s] [%4s / %4s] Transferring '%s'  \r" 
+    Printf.sprintf "> [%-15s] [%4s / %4s] Transferring '%s'  \r" 
       progress_bar
       (human_readable_bytes (trans_size+file.size))
       (human_readable_bytes full_size)

@@ -142,18 +142,25 @@ let unmount ~settings () =
   let s = settings in
   match s.unmount with
   | false -> 
-    ( Msg.term `Notif "unmount" [ "Not going to unmount." ];
+    ( Msg.term `Notif "unmount" [
+          "Not going to unmount device '.";
+          settings.name; "'.";
+        ];
       Ok () )
   | true  -> 
     (Sys.command ("umount " ^ (s.mount_path |> Folder.escape))
     |> function 
         | 0 -> 
-          ( Msg.term `Notif "unmount" [ "Unmount succesful." ]; 
+          ( Msg.term `Notif "unmount" [
+                "Unmount succesful for device '.";
+                settings.name; "'.";
+              ]; 
             Ok () )
         | errcode -> 
-          ( Msg.term `Error "unmount" 
-              [ "Error occured during unmounting. "; 
-                "Error-code was '"; String.of_int errcode;
-                "'." ];
+          ( Msg.term `Error "unmount" [
+                "Error occured during unmounting device '.";
+                settings.name; "'.";
+                "Error-code was '"; String.of_int errcode; "'."
+              ];
             Bad UnMountFailure ))
       

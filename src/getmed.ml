@@ -37,20 +37,22 @@ let handle_errors = function
     begin
       Msg.term `Error "handle_errors" [
         "Getmed failed on device '"; dev.name; "' with the ";
-        "error: "
+        "error: '";
+        Printexc.to_string exn;
+        "'.";
       ];
-      raise exn
+      exit 1
     end
   | ((Bad exn_after_mounting), dev) ->
     begin
-      ( match dev.unmount with 
-        | true  -> Dev.unmount ~settings:dev |> ignore
-        | false -> () );
       Msg.term `Error "handle_errors" [
         "Getmed failed on device '"; dev.name; "' with the ";
-        "error: "
+        "error: '";
+        Printexc.to_string exn_after_mounting;
+        "'.";
       ];
-      raise exn_after_mounting
+      Dev.unmount ~settings:dev () |> ignore;
+      exit 1
     end
 
 let bind_result f v = Result.Monad.bind v f 

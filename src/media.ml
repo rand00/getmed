@@ -268,6 +268,7 @@ let search ~(settings:Rc2.device_config) () =
 let copy_file ~settings file =
   let open BatResult.Monad in
   let error str =
+    print_endline "";
     Msg.term `Error ("copy file:"^file.path) 
         [ "An error '"; str;
           "' from program 'cp' occured while ";
@@ -275,14 +276,17 @@ let copy_file ~settings file =
   in
   List.fold_left_result
     (fun () destination_path ->
-       begin match Sys.file_exists destination_path with
+       let destination_file =
+         (destination_path /: Filename.basename file.path) in
+       begin match Sys.file_exists destination_file with
          | false -> Ok destination_path
          | true ->
+           print_endline "";
            Msg.term `Error "copy file" [
              "Error while trying to copy file '";
              file.path;
              "' - the file already exists at location '";
-             destination_path;
+             destination_file;
              "'.";
            ];
            Bad MediaCopyFailure
@@ -366,7 +370,7 @@ let cleanup media ~settings () =
     let files_at_mount =
       Sys.readdir settings.mount_path
       |> Array.to_list
-      |> List.map (fun fn -> Folder.escape @@ settings.mount_path /: fn)
+      |> List.map (fun fn -> settings.mount_path /: fn)
     in
     if not @@ List.for_all Sys.file_exists files_at_mount then 
       ( Msg.term `Error "remove media"
