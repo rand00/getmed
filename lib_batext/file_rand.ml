@@ -23,7 +23,21 @@ open Batteries
 include File
 
 module Infix = struct 
-  let ( /: ) dir file = (String.concat "" [dir; "/" ; file ])
+
+  (** it's the clients responsibility to check that 'dir' is not empty*)
+  let ( /: ) dir file =
+    String.concat "" @@ List.flatten [
+      [dir];
+      begin
+        let len = String.length dir in
+        if len > 0 && dir.[len-1] = '/' then
+          []
+        else
+          ["/"]
+      end;
+      [file]
+    ]
+
 end
 
 let is_dir file = Sys.file_exists file && Sys.is_directory file
