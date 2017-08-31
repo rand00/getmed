@@ -18,6 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
+module OText = Text
 open Batteries
 
 include File
@@ -29,7 +30,7 @@ module Infix = struct
     String.concat "" @@ List.flatten [
       [dir];
       begin
-        let len = String.length dir in
+        let len = OText.length dir in
         if len > 0 && dir.[len-1] = '/' then
           []
         else
