@@ -89,13 +89,19 @@ let make_extensions
     video_meta_exts;
   }
 
-let lowercase_extensions es =
-  let l ss = List.map String.lowercase ss in
+let remove_predot s =
+  if String.starts_with s "." then
+    String.sub s 1 (String.length s - 1)
+  else
+    s
+
+let fixup_extensions es =
+  let fix ss = List.map (String.lowercase%remove_predot) ss in
   {
-    image_exts = l es.image_exts;
-    image_meta_exts = l es.image_meta_exts;
-    video_exts = l es.video_exts;
-    video_meta_exts = l es.video_meta_exts;
+    image_exts = fix es.image_exts;
+    image_meta_exts = fix es.image_meta_exts;
+    video_exts = fix es.video_exts;
+    video_meta_exts = fix es.video_meta_exts;
   }
 
 let filter_extensions_by_rc settings =
@@ -212,7 +218,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
                ~recurse
                ~extensions:(
                  filter_extensions_by_rc settings
-                 |> lowercase_extensions
+                 |> fixup_extensions
                )
            ) dir), settings)
         >>= (fun ~settings media_list -> 
