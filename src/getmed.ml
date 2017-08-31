@@ -76,7 +76,6 @@ let handle_devices ~(settings:Rc2.config) () =
         >>? Rc2.print_dev_config ~debug:outer_settings.debug
 
         >>= fun ~settings media -> 
-
         StateResult.return () ~settings
         >> S.read @@ Media.dirs_fix
         >> S.read @@ Media.transfer media
