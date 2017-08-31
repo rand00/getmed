@@ -1,11 +1,12 @@
 
+<src/**>: include
 true: \
   thread, \
   package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime,batteries,text,text.pcre,textwrap, pcre)
 
-<dev.*> or <lib_batext/**>: \
+<src/dev.*> or <lib_batext/**>: \
   syntax(camlp4o), \
   package(text.pcre-syntax)
 
-#<rc2.ml>: \
+#<src/rc2.ml>: \
 #  package(ppx_deriving_yojson)

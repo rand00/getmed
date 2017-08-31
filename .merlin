@@ -1,6 +1,6 @@
 
-S .
-B _build
+S src
+B _build/src
 S lib_batext
 B _build/lib_batext
 
