@@ -42,7 +42,7 @@ let concat_titles ~settings typ =
            | _  -> [ "_"; s.folders_append ]);
          ( match s.folders_append_cam_name with
            | false -> [ "" ] 
-           | true  -> [ "_"; s.name ])
+           | true  -> [ "."; s.name ])
        ]
     )
   in match typ with 
