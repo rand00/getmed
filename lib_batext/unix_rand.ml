@@ -20,7 +20,7 @@
 
 open Batteries
 
-include Sys
+include Unix
 
 let command_getlines cmd = 
   Unix.open_process_in cmd |> IO.lines_of

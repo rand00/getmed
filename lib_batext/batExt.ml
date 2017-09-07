@@ -18,7 +18,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *)
 
-module Sys = struct include Sys_rand end
+module Unix = struct include Unix_rand end
 
 module Arg = struct include Arg_rand end
 

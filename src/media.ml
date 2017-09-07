@@ -263,7 +263,7 @@ let search ~(settings:Rc2.device_config) () =
     types_to_transfer_list
     |> which_media_types (fun t -> t)
   in (Ok files, { settings with types_to_transfer })
-  
+
 
 let copy_file ~settings file =
   let open BatResult.Monad in

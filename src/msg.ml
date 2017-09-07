@@ -29,7 +29,7 @@ let termwrap
     ss = 
   String.concat "" ss
   |> (fun str -> 
-      let wrap_len = Sys.term_ncolumns () in
+      let wrap_len = Unix.term_ncolumns () in
       let (init_line, rest_str) = 
         (match initial_nonwrap with
          | 0 -> [], str
@@ -83,6 +83,10 @@ let human_readable_bytes bytes =
     else bytes, "B"
   in Printf.sprintf "%.0f%s" amount category 
 
+(*goto exchange prev_len with size of terminal
+  - for rewriting to new progress function + new cp
+  or just print init len term
+*)
 let progress ~full_size ~trans_size ~prev_len file = 
   let open Media_types in
   let f = Float.of_int in

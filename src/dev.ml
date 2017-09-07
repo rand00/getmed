@@ -44,7 +44,7 @@ let is_device device_match blkid_line =
 (*goto trap exceptions in monad (and in all other functions)*)
 let find ~settings () = 
   let open Rc2 in
-  let blkid = Sys.command_getlines "blkid" in
+  let blkid = Unix.command_getlines "blkid" in
   try 
     (Ok (Enum.find (is_device settings.device_match) blkid 
          |> (function 
@@ -61,55 +61,55 @@ let find ~settings () =
 
 
 let get_dir_if_mounted dev dir =
-  Ok (Sys.command_getlines "mount")
+  Ok (Unix.command_getlines "mount")
   >>= (fun mount_lines -> 
-    try 
-      Enum.find (Pcre.pmatch ~pat:("^" ^ dev)) mount_lines
-      |> function 
-          | <:re< [^" "]* " on " ( [^" "]{1+} as dir_existing ) >> -> 
-            ( Msg.term `Notif "mount"
-                [ "Device '"; dev; "' already mounted at '";
-                  dir_existing; "' - going to use existing ";
-                  "mountpoint." ];
-              Ok (`Dont_mount dir_existing) )
-          | _ -> Ok (`Mount dir) (*will not happen*)
+      try 
+        Enum.find (Pcre.pmatch ~pat:("^" ^ dev)) mount_lines
+        |> function 
+        | <:re< [^" "]* " on " ( [^" "]{1+} as dir_existing ) >> -> 
+          ( Msg.term `Notif "mount"
+              [ "Device '"; dev; "' already mounted at '";
+                dir_existing; "' - going to use existing ";
+                "mountpoint." ];
+            Ok (`Dont_mount dir_existing) )
+        | _ -> Ok (`Mount dir) (*will not happen*)
 
-    with Not_found -> 
-      ( Msg.term `Notif "mount"
-          [ "Device not already mounted; ";
-            "going to mount at '"; dir; "'." ];
-        Ok (`Mount dir) ))
+      with Not_found -> 
+        ( Msg.term `Notif "mount"
+            [ "Device not already mounted; ";
+              "going to mount at '"; dir; "'." ];
+          Ok (`Mount dir) ))
 
 
 let mountpoint_fix_or_find dev dir = 
   get_dir_if_mounted dev dir
   >>= function
-    | (`Dont_mount dir_existing) as dir_and_action -> 
-      Ok dir_and_action
-    | (`Mount dir) as dir_and_action -> 
-      if Sys.file_exists dir && Sys.is_directory dir then 
-        match (Array.length (Sys.readdir dir)) with
-        | 0 -> Ok dir_and_action
-        | _ -> 
-          ( Msg.term `Error "fix mountpoint"
-              [ "The given mount-folder is not empty. ";
-                "Exiting."];
-            Bad MountFolderNotEmpty )
-      else if Sys.file_exists dir && not (Sys.is_directory dir) then
+  | (`Dont_mount dir_existing) as dir_and_action -> 
+    Ok dir_and_action
+  | (`Mount dir) as dir_and_action -> 
+    if Sys.file_exists dir && Sys.is_directory dir then 
+      match (Array.length (Sys.readdir dir)) with
+      | 0 -> Ok dir_and_action
+      | _ -> 
         ( Msg.term `Error "fix mountpoint"
-              [ "The given mount-folder exists, but is not a ";
-                "directory. Exiting."];
-            Bad MountFolderIsNotADirectory )
-      else (*if dir does not exist*) 
-        ( Msg.term `Notif "fix mountpoint"
-            [ "Mount-point \""; dir; "\" "; 
-              "does not exist - creating it now." ];
-          try
-            Unix.mkdir dir 0o755;
-            Ok dir_and_action
-          with exn ->
-            Bad exn
-        )
+            [ "The given mount-folder is not empty. ";
+              "Exiting."];
+          Bad MountFolderNotEmpty )
+    else if Sys.file_exists dir && not (Sys.is_directory dir) then
+      ( Msg.term `Error "fix mountpoint"
+          [ "The given mount-folder exists, but is not a ";
+            "directory. Exiting."];
+        Bad MountFolderIsNotADirectory )
+    else (*if dir does not exist*) 
+      ( Msg.term `Notif "fix mountpoint"
+          [ "Mount-point \""; dir; "\" "; 
+            "does not exist - creating it now." ];
+        try
+          Unix.mkdir dir 0o755;
+          Ok dir_and_action
+        with exn ->
+          Bad exn
+      )
 
 
 let mount dev = function
@@ -118,23 +118,27 @@ let mount dev = function
     (Sys.command 
        (String.concat " " 
           [ "mount"; dev; (dir |> Folder.escape) ]) 
-    |> function 
-        | 0 -> 
-          ( Msg.term `Notif "mount" [ "Mount succesful." ]; 
-            Ok dir )
-        | errcode -> 
-          ( Msg.term `Error "mount" 
-              [ "Error occured during mounting. "; 
-                "Error-code was '"; String.of_int errcode;
-                "' - see 'man mount' for more info." ];
-            Bad MountError ))
+     |> function 
+     | 0 -> 
+       ( Msg.term `Notif "mount" [ "Mount succesful." ]; 
+         Ok dir )
+     | errcode -> 
+       ( Msg.term `Error "mount" 
+           [ "Error occured during mounting. "; 
+             "Error-code was '"; String.of_int errcode;
+             "' - see 'man mount' for more info." ];
+         Bad MountError ))
 
 
-let mount_smartly ~settings dev = Rc2.(
-  (mountpoint_fix_or_find dev settings.mount_path >>= mount dev)
+let mount_smartly ~settings dev =
+  let open Rc2 in
+  begin
+    mountpoint_fix_or_find dev settings.mount_path
+    >>= mount dev
+  end
   |> function
-      | Ok mount_path -> ((Ok ()), { settings with mount_path })
-      | (Bad _) as bad -> (bad, settings) )
+  | Ok mount_path -> ((Ok ()), { settings with mount_path })
+  | (Bad _) as bad -> (bad, settings)
 
 open Rc2.T
 
@@ -149,18 +153,18 @@ let unmount ~settings () =
       Ok () )
   | true  -> 
     (Sys.command ("umount " ^ (s.mount_path |> Folder.escape))
-    |> function 
-        | 0 -> 
-          ( Msg.term `Notif "unmount" [
-                "Unmount succesful for device '.";
-                settings.name; "'.";
-              ]; 
-            Ok () )
-        | errcode -> 
-          ( Msg.term `Error "unmount" [
-                "Error occured during unmounting device '.";
-                settings.name; "'.";
-                "Error-code was '"; String.of_int errcode; "'."
-              ];
-            Bad UnMountFailure ))
-      
+     |> function 
+     | 0 -> 
+       ( Msg.term `Notif "unmount" [
+             "Unmount succesful for device '.";
+             settings.name; "'.";
+           ]; 
+         Ok () )
+     | errcode -> 
+       ( Msg.term `Error "unmount" [
+             "Error occured during unmounting device '.";
+             settings.name; "'.";
+             "Error-code was '"; String.of_int errcode; "'."
+           ];
+         Bad UnMountFailure ))
+
