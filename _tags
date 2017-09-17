@@ -2,7 +2,7 @@
 <src/**>: include
 true: \
   thread, \
-  package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime,batteries,text,text.pcre,textwrap, pcre)
+  package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime,batteries,text,text.pcre,textwrap, pcre, lambda-term)
 
 <src/dev.*> or <lib_batext/**>: \
   syntax(camlp4o), \

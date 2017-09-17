@@ -150,16 +150,15 @@ let rec traverse_tree
     files
     |> List.filter_map (
       fun elem -> 
-        let path = ( dir /: elem ) in
-        if is_ext extensions path then
-          save path mediatype
+        if is_ext extensions elem then
+          save (dir /: elem) mediatype
         else None
     )
   in
   let filter_meta meta_type media_files extensions =
     match media_files with
     | [] -> []
-    | _ -> filter_files meta_type extensions
+    | _  -> filter_files meta_type extensions
   in
   let image_files = filter_files `Img e.image_exts
   and video_files = filter_files `Vid e.video_exts in
@@ -265,14 +264,13 @@ let search ~(settings:Rc2.device_config) () =
   in (Ok files, { settings with types_to_transfer })
 
 
-let copy_file ~settings file =
+let copy_file ~settings ~progress file =
   let open BatResult.Monad in
   let error str =
     print_endline "";
     Msg.term `Error ("copy file:"^file.path) 
         [ "An error '"; str;
-          "' from program 'cp' occured while ";
-          "trying to copy the file." ]
+          "' occured on copying file." ]
   in
   List.fold_left_result
     (fun () destination_path ->
@@ -291,19 +289,12 @@ let copy_file ~settings file =
            ];
            Bad MediaCopyFailure
        end
-       >>= Result.catch (fun fn ->
-           Sys.command @@
-           String.concat " " [
-             "cp";
-             Folder.escape file.path;
-             Folder.escape fn
-           ]
+       >>= Result.catch (fun dest ->
+           let progress = progress ~file in
+           Unix.cp ~progress file.path dest
          )
        |> function
-       | Ok 0 -> Ok ()
-       | Ok error_code ->
-         error @@ Int.to_string error_code;
-         Bad MediaCopyFailure
+       | Ok _ as ok -> ok
        | Bad MediaCopyFailure as b -> b
        | Bad exn ->
          error @@ Printexc.to_string exn;
@@ -320,15 +311,20 @@ let (>|=) v f = map_result f v
 
 let transfer ~settings media () =
   let open BatResult.Infix in
-  let full_size = 
-    List.fold_left (fun acc file -> acc + file.size) 0 media 
-  in 
+  let full_transfer_size = 
+    List.fold_left (fun acc file -> acc + file.size) 0 media in
+  let start_time = Unix.gettimeofday () in
   let result_copy = 
-    List.fold_left_result (fun (trans_size, prev_len) file -> 
-        let len = Msg.progress ~full_size ~trans_size ~prev_len file in
-        copy_file ~settings file >|= fun () -> 
-        (trans_size + file.size, len)
-      ) (0, 0) media 
+    List.fold_left_result (fun prev_transf file -> 
+        let progress =
+          Msg.progress
+            ~start_time
+            ~full_transfer_size
+            ~prev_transf
+        in
+        copy_file ~settings ~progress file >|= fun () -> 
+        prev_transf + file.size
+      ) 0 media 
   in 
   let _ = print_endline "" 
   in

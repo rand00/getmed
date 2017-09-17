@@ -40,3 +40,27 @@ let get_command_output cmd =
   if exn <> End_of_file then raise exn;
   (status, outputs) 
 (*From *UnixJunkie* - to come in later batteries release*)
+
+let cp ~progress fi fo =
+  let fo =
+    if Sys.is_directory fo then
+      let filename = Filename.basename fi in
+      Filename.concat fo filename
+    else fo
+  in
+  let i = File.open_in fi
+  and o, pos_cb = IO.pos_out @@ File.open_out fo in
+  let size_4k = Int.pow 2 12 in
+  let size_1m = Int.pow 2 20 in
+  let buffer = size_1m / 10 in
+  begin
+    try
+      while true do
+        IO.nread i buffer |> IO.nwrite o;
+        progress @@ pos_cb ()
+      done
+    with IO.No_more_input -> ()
+  end;
+  IO.close_in i;
+  IO.close_out o
+

@@ -83,11 +83,13 @@ let human_readable_bytes bytes =
     else bytes, "B"
   in Printf.sprintf "%.0f%s" amount category 
 
+(** Progress printing*)
+
 (*goto exchange prev_len with size of terminal
   - for rewriting to new progress function + new cp
   or just print init len term
 *)
-let progress ~full_size ~trans_size ~prev_len file = 
+let progress_old ~full_size ~trans_size ~prev_len file = 
   let open Media_types in
   let f = Float.of_int in
   let progress_len =
@@ -106,4 +108,104 @@ let progress ~full_size ~trans_size ~prev_len file =
     flush stdout;
   end;
   String.length final_string
+
+let human_readable_time ~pr_second p =
+  let second = pr_second in
+  let minute = second * 60 in
+  let hour = minute * 60 in
+  let day = hour * 24 in
+  let year = day * 365 in
+  let s = Printf.sprintf
+  in
+  if p >= year then
+    s "%d year(s), %d day(s)"
+      (p/year) ((p mod year) / day)
+  else if p >= day then
+    s "%d day(s), %d hour(s), %d minute(s)"
+      (p/day) ((p mod day) / hour) ((p mod hour) / minute)
+  else if p >= hour then
+    s "%d hour(s), %d minute(s), %d second(s)"
+      (p/hour) ((p mod hour) / minute) ((p mod minute) / second)
+  else if p >= minute then
+    s "%d minute(s), %d second(s)"
+      (p/minute) ((p mod minute) / second)
+  else 
+    s "%1.1f second(s)" (float p /. float second)
+
+(* goto use 
+   . LTerm.clear_line
+   . LTerm.print[l]s (print styled on stdout)
+   . LTerm_text.eval [...]
+*)
+
+(*goto make like old progress output *)
+let progress
+    ~start_time
+    ~full_transfer_size
+    ~prev_transf
+    ~file
+    fo_transf =
+  let open Media_types in
+  let f = Float.of_int 
+  and s = Printf.sprintf
+  in
+  let transferred = prev_transf + fo_transf in
+  let pct_transferred =
+    f transferred *. 100. /. f full_transfer_size in
+  let time_spent = Unix.gettimeofday () -. start_time in
+  let time_overall = (100. /. pct_transferred) *. time_spent in
+  let time_left = ((100. -. pct_transferred) /. 100.) *. time_overall in
+  let transfer_speed = s "%s/Second" (
+      f transferred /. time_spent
+      |> Int.of_float
+      |> human_readable_bytes
+    )
+  in
+  let progress_bar =
+    let len =
+      (f transferred /. f full_transfer_size) *. 15. 
+      |> Int.of_float in
+    String.make len '|' in
+  let c i = LTerm_style.index i in
+  let c1 = c 1 in
+  let c2 = c 2 in
+  let markup_box s = LTerm_text.([
+      B_bold true;
+      B_fg (c1);
+      S "[";
+      E_fg;
+      E_bold;
+      B_fg c2;
+      S s;
+      E_fg;
+      B_bold true;
+      B_fg (c1);
+      S "]";
+      E_fg;
+      E_bold;
+    ]) in
+  let progress_markup = LTerm_text.(List.flatten [
+      [ S (" ") ];
+      markup_box (s "%-15s" progress_bar);
+      markup_box (s "%4s/%4s"
+                    (human_readable_bytes (transferred+file.size))
+                    (human_readable_bytes full_transfer_size)
+                 );
+      markup_box (s "%s" transfer_speed);
+      markup_box (s "ETR:%s"
+                    (human_readable_time ~pr_second:1 @@ Int.of_float time_left)
+                 );
+      [ S (": " ^ file.path) ];
+    ])
+  in
+  begin
+    let open Lwt in
+    Lazy.force LTerm.stdout >>= 
+    LTerm.clear_line >>= fun _ ->
+    LTerm.prints (LTerm_text.eval progress_markup)
+  end
+  |> Lwt_main.run
+(*<goto do we want other stuff to be in the lwt monad?*)
+
+
 
