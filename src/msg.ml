@@ -171,7 +171,7 @@ let progress
   let c2 = c 2 in
   let markup_box s = LTerm_text.([
       B_bold true;
-      B_fg (c1);
+      B_fg c1;
       S "[";
       E_fg;
       E_bold;
@@ -179,30 +179,35 @@ let progress
       S s;
       E_fg;
       B_bold true;
-      B_fg (c1);
+      B_fg c1;
       S "]";
       E_fg;
       E_bold;
     ]) in
-  let progress_markup = LTerm_text.(List.flatten [
+  let filename_markup = LTerm_text.([
+      B_fg c2;
+      S (s "\rCopying '%s'\n" file.path);
+      E_fg
+    ])
+  and progress_markup = LTerm_text.(List.flatten [
       [ S (" ") ];
       markup_box (s "%-15s" progress_bar);
-      markup_box (s "%4s/%4s"
-                    (human_readable_bytes (transferred+file.size))
-                    (human_readable_bytes full_transfer_size)
-                 );
+      markup_box (
+        s "%4s/%4s"
+          (human_readable_bytes (transferred+file.size))
+          (human_readable_bytes full_transfer_size)
+      );
       markup_box (s "%s" transfer_speed);
-      markup_box (s "ETR:%s"
-                    (human_readable_time ~pr_second:1 @@ Int.of_float time_left)
-                 );
-      [ S (": " ^ file.path) ];
+      markup_box (
+        s "ETR:%s"
+          (human_readable_time ~pr_second:1 @@ Int.of_float time_left)
+      );
     ])
   in
   begin
     let open Lwt in
-    Lazy.force LTerm.stdout >>= 
-    LTerm.clear_line >>= fun _ ->
-    LTerm.prints (LTerm_text.eval progress_markup)
+    LTerm.prints @@ LTerm_text.eval filename_markup >>= fun _ ->
+    LTerm.prints @@ LTerm_text.eval progress_markup
   end
   |> Lwt_main.run
 (*<goto do we want other stuff to be in the lwt monad?*)
