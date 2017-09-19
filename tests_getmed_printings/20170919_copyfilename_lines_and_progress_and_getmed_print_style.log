@@ -1,0 +1,15 @@
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+Copying '/mnt/getmed_rx100/DCIM/100MSDCF/_DSC2248.ARW'econd(s)]
+ [|||||||||||||||][187MB/166MB][86MB/Second][ETR:0.0 second(s)]
+getmed:unmount:
+  Unmount succesful for device '.sony_rx_100_mk5'.
+getmed:handle_errors:
+  Getmed ran succesfully for device 'sony_rx_100_mk5'.
+getmed:getmed:
+  Getmed ran succesfully for all devices.
