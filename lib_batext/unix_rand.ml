@@ -41,6 +41,13 @@ let get_command_output cmd =
   (status, outputs) 
 (*From *UnixJunkie* - to come in later batteries release*)
 
+let set_user_as_owner f =
+  let open Unix in
+  let {pw_name; pw_uid; pw_gid} =
+    getlogin () |> getpwnam in
+  chown f pw_uid pw_gid 
+
+(*note: only for copying non-directories for now*)
 let cp ~progress fi fo =
   let fo =
     if Sys.is_directory fo then
@@ -62,5 +69,6 @@ let cp ~progress fi fo =
     with IO.No_more_input -> ()
   end;
   IO.close_in i;
-  IO.close_out o
+  IO.close_out o;
+  set_user_as_owner fo
 
