@@ -210,7 +210,9 @@ let progress
   in
   begin
     let open Lwt in
-    LTerm.print @@ String.make 80 ' ' ^ "\r" >>= fun () ->
+    (*LTerm.print @@ String.make 80 ' ' ^ "\r" >>= fun () ->*)
+    Lazy.force LTerm.stdout >>= 
+    LTerm.clear_line_prev >>= fun () ->
     LTerm.prints @@ LTerm_text.eval filename_markup >>= fun () ->
     LTerm.prints @@ LTerm_text.eval progress_markup
   end
