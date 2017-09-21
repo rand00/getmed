@@ -67,7 +67,8 @@ let term typ title ss =
       (termwrap ss) ]
   |> print_endline
 
-let human_readable_bytes bytes =
+
+let human_readable_bytes' bytes =
   let r p = float @@ Int.pow 10 p in
   let kb = r 3
   and mb = r 6
@@ -81,8 +82,12 @@ let human_readable_bytes bytes =
     else if bytes > mb then bytes /. mb, "MB"
     else if bytes > kb then bytes /. kb, "KB"
     else bytes, "B"
-  in Printf.sprintf "%.0f%s" amount category 
+  in ((Printf.sprintf "%.0f" amount), category)
 
+let human_readable_bytes bytes =
+  let amount, unit = human_readable_bytes' bytes in
+  amount ^ unit
+    
 (** Progress printing*)
 
 (*goto exchange prev_len with size of terminal
@@ -155,11 +160,13 @@ let progress
   let time_spent = Unix.gettimeofday () -. start_time in
   let time_overall = (100. /. pct_transferred) *. time_spent in
   let time_left = ((100. -. pct_transferred) /. 100.) *. time_overall in
-  let transfer_speed = s "%s/Second" (
+  let transfer_speed =
+    let s_num, s_unit =
       f transferred /. time_spent
       |> Int.of_float
-      |> human_readable_bytes
-    )
+      |> human_readable_bytes'
+    in
+    (s_num, (s_unit^"/Second"))
   in
   let progress_bar =
     let len =
@@ -167,46 +174,44 @@ let progress
       |> Int.of_float in
     String.make len '|' in
   let c i = LTerm_style.index i in
-  let c1 = c 1 in
+  let c1 = c 1 in (*goto supply as theme - set in config*)
   let c2 = c 2 in
-  let markup_box s = LTerm_text.([
-      B_bold true;
-      B_fg c1;
-      S "[";
-      E_fg;
-      E_bold;
-      B_fg c2;
-      S s;
-      E_fg;
-      B_bold true;
-      B_fg c1;
-      S "]";
-      E_fg;
-      E_bold;
+  let c3 = c 3 in
+  let markup_box s = LTerm_text.(List.flatten [
+      [ B_bold true; B_fg c1; S "["; E_fg; E_bold; ];
+      s;
+      [ B_bold true; B_fg c1; S "]"; E_fg; E_bold; ]
     ]) in
   let filename_markup = LTerm_text.([
-      B_fg c2;
       S (s "\rCopying '%s'\n" file.path);
-      E_fg
-    ])
-  and progress_markup = LTerm_text.(List.flatten [
-      [ S (" ") ];
-      markup_box (s "%-15s" progress_bar);
+    ]) 
+  and markup_num2 (n,u) (n', u') = LTerm_text.([
+    B_fg c3; S n; E_fg; B_fg c2; S u;
+    S "/"; E_fg; 
+    B_fg c3; S n'; E_fg; B_fg c2; S u'; E_fg;
+  ])
+  and markup_num (n,u) = LTerm_text.([
+    B_fg c3; S n; E_fg; B_fg c2; S u; E_fg; 
+  ]) in
+  let progress_markup = LTerm_text.(List.flatten [
+      markup_box [S (s "%-15s" progress_bar)];
       markup_box (
-        s "%4s/%4s"
-          (human_readable_bytes (transferred+file.size))
-          (human_readable_bytes full_transfer_size)
+        markup_num2
+          (human_readable_bytes' (transferred+file.size))
+          (human_readable_bytes' full_transfer_size)
       );
-      markup_box (s "%s" transfer_speed);
-      markup_box (
-        s "ETR:%s"
-          (human_readable_time ~pr_second:1 @@ Int.of_float time_left)
-      );
+      markup_box (markup_num transfer_speed);
+      markup_box [
+        S (s "ETR:%s"
+             (Int.of_float time_left
+              |> human_readable_time ~pr_second:1 ))
+      ];
     ])
   in
   begin
     let open Lwt in
-    LTerm.prints @@ LTerm_text.eval filename_markup >>= fun _ ->
+    LTerm.print @@ String.make 80 ' ' ^ "\r" >>= fun () ->
+    LTerm.prints @@ LTerm_text.eval filename_markup >>= fun () ->
     LTerm.prints @@ LTerm_text.eval progress_markup
   end
   |> Lwt_main.run
