@@ -174,16 +174,16 @@ let progress
       |> Int.of_float in
     String.make len '|' in
   let c i = LTerm_style.index i in
-  let c1 = c 1 in (*goto supply as theme - set in config*)
-  let c2 = c 2 in
-  let c3 = c 3 in
+  let c1 (*anglebrackets*) = c 1 in (*goto supply as theme - set in config*)
+  let c2 (*special text*) = c 2 in
+  let c3 (*numbers*) = c 3 in
   let markup_box s = LTerm_text.(List.flatten [
       [ B_bold true; B_fg c1; S "["; E_fg; E_bold; ];
       s;
       [ B_bold true; B_fg c1; S "]"; E_fg; E_bold; ]
     ]) in
   let filename_markup = LTerm_text.([
-      S (s "\rCopying '%s'\n" file.path);
+      B_fg c2; S (s "\rCopying '%s'\n" file.path); E_fg
     ]) 
   and markup_num2 (n,u) (n', u') = LTerm_text.([
     B_fg c3; S n; E_fg; B_fg c2; S u;
