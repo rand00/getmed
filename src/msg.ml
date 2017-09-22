@@ -181,13 +181,9 @@ let progress
       [ B_bold true; B_fg c1; S "["; E_fg; E_bold; ];
       s;
       [ B_bold true; B_fg c1; S "]"; E_fg; E_bold; ]
-    ]) in
-  let filename_markup = LTerm_text.([
-      B_fg c2; S (s "\rCopying '%s'\n" file.path); E_fg
     ]) 
   and markup_num2 (n,u) (n', u') = LTerm_text.([
-    B_fg c3; S n; E_fg; B_fg c2; S u;
-    S "/"; E_fg; 
+    B_fg c3; S n; E_fg; B_fg c2; S u; S "/"; E_fg; 
     B_fg c3; S n'; E_fg; B_fg c2; S u'; E_fg;
   ])
   and markup_num (n,u) = LTerm_text.([
@@ -213,7 +209,6 @@ let progress
     (*LTerm.print @@ String.make 80 ' ' ^ "\r" >>= fun () ->*)
     Lazy.force LTerm.stdout >>= 
     LTerm.clear_line_prev >>= fun () ->
-    LTerm.prints @@ LTerm_text.eval filename_markup >>= fun () ->
     LTerm.prints @@ LTerm_text.eval progress_markup
   end
   |> Lwt_main.run

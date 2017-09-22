@@ -323,6 +323,23 @@ let transfer ~settings media () =
             ~prev_transf
         in
         copy_file ~settings ~progress file >|= fun () -> 
+        begin
+          (* "\rCopying '%s'\n" *)
+          let c i = LTerm_style.index i in
+          let c1 (*anglebrackets*) = c 1 in
+          (*<goto supply as theme - set in config*)
+          let c2 (*special text*) = c 2 in
+          let c3 (*numbers*) = c 3 in
+          let filename_markup = LTerm_text.([
+              S "Copying '";
+              B_fg c2; S file.path; E_fg;
+              S "'"
+            ]) in
+          let open Lwt in
+          Lazy.force LTerm.stdout >>= 
+          LTerm.clear_line_prev >>= fun () ->
+          LTerm.printls @@ LTerm_text.eval filename_markup
+        end |> Lwt_main.run;
         prev_transf + file.size
       ) 0 media 
   in 
