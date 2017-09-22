@@ -193,7 +193,7 @@ let progress
       markup_box [S (s "%-15s" progress_bar)];
       markup_box (
         markup_num2
-          (human_readable_bytes' (transferred+file.size))
+          (human_readable_bytes' transferred)
           (human_readable_bytes' full_transfer_size)
       );
       markup_box (markup_num transfer_speed);
