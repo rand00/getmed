@@ -89,8 +89,8 @@ let handle_devices ~(settings:Rc2.config) () =
   loop settings.devices ()
 
 let print_success ~settings () = Ok (
-    Msg.term `Notif "getmed" [
-      "Getmed ran succesfully for all devices."
+    Msg.term `Notif "main" [
+      "Ran succesfully for all devices."
     ]
   ), settings  
 
