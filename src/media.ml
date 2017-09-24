@@ -54,7 +54,15 @@ let concat_titles ~settings typ =
 
 
 let dirs_fix ~settings () =
-  let create_dir _ str = Folder.create_if_nonexistent str in
+  let create_dir _ folder =
+    let created = Folder.create_if_nonexistent folder in
+    let _ = try Unix.set_user_as_owner folder with _ ->
+      Msg.term `Notif "setup media directories"
+        [ "Couldn't change owner of output-folder '";
+          folder;
+          "' to user." ]
+    in created
+  in
   let create_dirs dirs = List.fold_left_result create_dir true dirs
   in
   match settings.types_to_transfer with 
