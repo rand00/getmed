@@ -19,6 +19,12 @@
 open Batteries
 open BatExt
 
+(*goto put into rc as theme*)
+let c i = LTerm_style.index i 
+let c1 (*anglebrackets*) = c 1 
+let c2 (*special text*) = c 2 
+let c3 (*numbers*) = c 3 
+
 let termwrap 
     ?(initial_nonwrap=0) 
     (*options for textwrap >>*)
@@ -57,16 +63,27 @@ let termwrap
            ]))
 
 
-let term typ title ss = 
-  String.concat "" 
-    [ "getmed:";
+let term typ place_of_call ss =
+  let open LTerm_text in
+  let c_red = LTerm_style.rgb 143 0 0 in
+  let wrap_in_color color s_text =
+    B_fg color :: s_text @ [E_fg] in
+  let head_str = "getmed:" ^ place_of_call ^ ":" in
+  let msg_markup = LTerm_text.(List.flatten [
+      (match typ with
+       | `Error -> wrap_in_color c_red [ S head_str ]
+       | `Major -> wrap_in_color c2 [ S head_str ]
+       | `Notif -> [ S head_str ]
+      );
       (match typ with 
-       | `Error -> "ERROR:"
-       | `Notif -> "");
-      title ^ ":\n";
-      (termwrap ss) ]
-  |> print_endline
-
+       | `Error -> [ S "error:" ]
+       | `Major | `Notif -> []
+      );
+      [ S (ss |> String.concat "") ]
+    ])
+  in
+  LTerm.printls @@ LTerm_text.eval msg_markup
+  |> Lwt_main.run
 
 let human_readable_bytes' bytes =
   let r p = float @@ Int.pow 10 p in
@@ -142,10 +159,6 @@ let progress
       (f transferred /. f full_transfer_size) *. 15. 
       |> Int.of_float in
     String.make len '|' in
-  let c i = LTerm_style.index i in
-  let c1 (*anglebrackets*) = c 1 in (*goto supply as theme - set in config*)
-  let c2 (*special text*) = c 2 in
-  let c3 (*numbers*) = c 3 in
   let markup_box s = LTerm_text.(List.flatten [
       [ B_bold true; B_fg c1; S "["; E_fg; E_bold; ];
       s;
@@ -171,17 +184,17 @@ let progress
              (Int.of_float time_left
               |> human_readable_time ~pr_second:1 ))
       ];
+      [ S "\r" ];
     ])
   in
   begin
     let open Lwt in
     (*LTerm.print @@ String.make 80 ' ' ^ "\r" >>= fun () ->*)
-    Lazy.force LTerm.stdout >>= 
-    LTerm.clear_line_prev >>= fun () ->
     LTerm.prints @@ LTerm_text.eval progress_markup
+    (* >>= fun () ->
+       LTerm.clear_line_next stdout*)
   end
   |> Lwt_main.run
-(*<goto do we want other stuff to be in the lwt monad?*)
 
 
 

@@ -58,7 +58,7 @@ let dirs_fix ~settings () =
     let created = Folder.create_if_nonexistent folder in
     let _ = try Unix.set_user_as_owner folder with _ ->
       Msg.term `Notif "setup media directories"
-        [ "Couldn't change owner of output-folder '";
+        [ "Couldn't change owner of folder '";
           folder;
           "' to user." ]
     in created
@@ -237,16 +237,15 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
             | [] -> 
               ( Msg.term `Notif "media search"
                   [ "No media files present in the specified ";
-                    "device subfolder - aborting." ];
-                ((Bad MediaNotPresent), settings) )
+                    "device subfolder." ];
+                (Ok ([], `None), settings) )
             | file_list -> ((Ok (file_list, types_to_transfer)), settings)))
 
-    (*goto should we really fail here? - 
-      maybe yes, but atleast inform user*)
+    (*goto should we really fail here? - maybe yes*)
     | false -> 
       ( Msg.term `Error "media search"
-          [ "The device directory '"; dir; "', does not";
-            "exist - aborting." ];
+          [ "The device directory '"; dir; "', does not ";
+            "exist." ];
         ((Bad DeviceFolderNonExistent), settings) ))
 
 
@@ -291,7 +290,7 @@ let copy_file ~settings ~progress file =
            Msg.term `Error "copy file" [
              "Error while trying to copy file '";
              file.path;
-             "' - the file already exists at location '";
+             "' - the file already exists at '";
              destination_file;
              "'.";
            ];
@@ -323,14 +322,7 @@ let transfer ~settings media () =
     List.fold_left (fun acc file -> acc + file.size) 0 media in
   let start_time = Unix.gettimeofday () in
   let result_copy = 
-    List.fold_left_result (fun prev_transf file -> 
-        let progress =
-          Msg.progress
-            ~start_time
-            ~full_transfer_size
-            ~prev_transf
-        in
-        copy_file ~settings ~progress file >|= fun () -> 
+    List.fold_left_result (fun prev_transf file ->
         begin
           (* "\rCopying '%s'\n" *)
           let c i = LTerm_style.index i in
@@ -344,10 +336,19 @@ let transfer ~settings media () =
               S "'"
             ]) in
           let open Lwt in
-          Lazy.force LTerm.stdout >>= 
-          LTerm.clear_line_prev >>= fun () ->
-          LTerm.printls @@ LTerm_text.eval filename_markup
-        end |> Lwt_main.run;
+          Lazy.force LTerm.stdout >>= fun stdout ->
+          LTerm.clear_line_next stdout >>= fun () ->
+          LTerm.fprintls stdout @@ LTerm_text.eval filename_markup
+        end
+        |> Lwt_main.run;
+
+        let progress =
+          Msg.progress
+            ~start_time
+            ~full_transfer_size
+            ~prev_transf
+        in
+        copy_file ~settings ~progress file >|= fun () -> 
         prev_transf + file.size
       ) 0 media 
   in 
@@ -375,9 +376,8 @@ let remove files ~recursive =
         Ok () )
     | errcode -> 
       ( Msg.term `Error "remove media"
-          [ "Something went wrong while removing ";
-            "media from the device - errorcode from ";
-            "command 'rm' was '"; String.of_int errcode;
+          [ "Errorcode from command 'rm' was '";
+            String.of_int errcode;
             "'." ];
         Bad RemoveFailure )
 
@@ -394,8 +394,8 @@ let cleanup media ~settings () =
       |> List.map (fun fn -> settings.mount_path /: fn)
     in
     if not @@ List.for_all Sys.file_exists files_at_mount then 
-      ( Msg.term `Error "remove media"
-          [ "Some of the files we try to remove doesn't exist." ];
+      ( Msg.term `Error "cleanup"
+          [ "Some of the files we want to remove doesn't exist." ];
         Bad RemoveFailure )
     else 
       remove files_at_mount ~recursive:true

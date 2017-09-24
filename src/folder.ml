@@ -32,28 +32,24 @@ let create_if_nonexistent folder =
       match Sys.is_directory folder with 
       | true  -> 
         ( Msg.term `Notif "create media directory"
-            [ "The specified folder '"; folder; "' already exists - ";
-              "going to use this and prompt you if any files are to be ";
-              "overwritten." ];
+            [ "Will reuse existing folder '"; folder; "'." ];
           Ok false )
       | false -> 
         ( Msg.term `Error "create media directory"
-            [ "The mediadirectory specified, "; folder;
-              " is not a directory." ];
+            [ "The media-directory specified, '"; folder;
+              "' is not a directory." ];
           Bad CreateFolder )
     )
   | false -> (
       match Sys.command ("mkdir -p "^(folder |> escape)) with
       | 0 -> (
           Msg.term `Notif "create media directory"
-            [ "The folder '"; folder; "' has now been created ";
-              "for media transferring." ];
+            [ "The directory '"; folder; "' has been created." ];
           Ok true
         )
       | _ -> (
           Msg.term `Error "create media directory"
-            [ "The folder '"; folder; "' could not get created. ";
-              "Aborting." ];
+            [ "The directory '"; folder; "' could not be created." ];
           Bad CreateFolder 
         )
     )

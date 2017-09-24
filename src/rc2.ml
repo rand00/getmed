@@ -154,7 +154,7 @@ type file_path = string
 
 let validate_field res_ref test error_msg =
   test || (
-    Msg.term `Error "validate rc" [
+    Msg.term `Error "validate RC" [
       "Field 'name' should be a non-empty string."
     ];
     res_ref := BatResult.Bad RcValidationError;
@@ -194,7 +194,7 @@ let read_from_file ~settings file =
     |> config_of_yojson
     |> function
     | Result.Ok settings' -> (
-      Msg.term `Notif "update-rc" [
+      Msg.term `Notif "update RC" [
         "Sucesfully parsed config-file."
       ];
       match validate_settings settings' with

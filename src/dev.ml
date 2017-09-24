@@ -52,7 +52,7 @@ let find ~settings () =
              | _ -> "")))
   , settings
   with Not_found ->
-    ( Msg.term `Error "find_device"
+    ( Msg.term `Error "find device"
         [ "There is no relevant device present, ";  
           "or you have not run getmed with the proper ";
           "rights." ];
@@ -69,17 +69,14 @@ let get_dir_if_mounted dev dir =
         | <:re< [^" "]* " on " ( [^" "]{1+} as dir_existing ) >> -> 
           ( Msg.term `Notif "mount"
               [ "Device '"; dev; "' already mounted at '";
-                dir_existing; "' - going to use existing ";
+                dir_existing; "'. Will use existing ";
                 "mountpoint." ];
             Ok (`Dont_mount dir_existing) )
         | _ -> Ok (`Mount dir) (*will not happen*)
 
       with Not_found -> 
-        ( Msg.term `Notif "mount"
-            [ "Device not already mounted; ";
-              "going to mount at '"; dir; "'." ];
-          Ok (`Mount dir) ))
-
+        Ok (`Mount dir)
+    )
 
 let mountpoint_fix_or_find dev dir = 
   get_dir_if_mounted dev dir
@@ -92,18 +89,21 @@ let mountpoint_fix_or_find dev dir =
       | 0 -> Ok dir_and_action
       | _ -> 
         ( Msg.term `Error "fix mountpoint"
-            [ "The given mount-folder is not empty. ";
-              "Exiting."];
+            [ "The supplied mount-point '";
+              dir;
+              "'is not empty. "];
           Bad MountFolderNotEmpty )
     else if Sys.file_exists dir && not (Sys.is_directory dir) then
       ( Msg.term `Error "fix mountpoint"
-          [ "The given mount-folder exists, but is not a ";
-            "directory. Exiting."];
+          [ "The given mount-point '";
+            dir;
+            "' is not a directory."];
         Bad MountFolderIsNotADirectory )
     else (*if dir does not exist*) 
       ( Msg.term `Notif "fix mountpoint"
-          [ "Mount-point \""; dir; "\" "; 
-            "does not exist - creating it now." ];
+          [ "Mount-point '";
+            dir;
+            "' does not exist - creating it now." ];
         try
           Unix.mkdir dir 0o755;
           Ok dir_and_action
@@ -147,7 +147,7 @@ let unmount ~settings () =
   match s.unmount with
   | false -> 
     ( Msg.term `Notif "unmount" [
-          "Not going to unmount device '.";
+          "Not going to unmount device '";
           settings.name; "'.";
         ];
       Ok () )
@@ -156,15 +156,16 @@ let unmount ~settings () =
      |> function 
      | 0 -> 
        ( Msg.term `Notif "unmount" [
-             "Unmount succesful for device '.";
+             "Unmount succesful for device '";
              settings.name; "'.";
            ]; 
          Ok () )
      | errcode -> 
        ( Msg.term `Error "unmount" [
-             "Error occured during unmounting device '.";
+             "Error occured during unmounting device '";
              settings.name; "'.";
-             "Error-code was '"; String.of_int errcode; "'."
+             "Error-code was '";
+             String.of_int errcode; "'."
            ];
          Bad UnMountFailure ))
 

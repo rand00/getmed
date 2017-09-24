@@ -26,18 +26,17 @@ module S = StateResult.Settings
 
 (* goto rewrite all modules to use rresult? *)
 
-
 let handle_errors = function 
   | ((Ok _), dev) -> 
-    ( Msg.term `Notif "handle_errors" [
-          "Getmed ran succesfully for device '"; dev.name;"'."
+    ( Msg.term `Major "handler" [
+          "Ran succesfully for device '"; dev.name;"'."
         ];
       Ok ())
   | ((Bad (BeforeMounting exn )), dev) ->
     begin
-      Msg.term `Error "handle_errors" [
-        "Getmed failed on device '"; dev.name; "' with the ";
-        "error: '";
+      Msg.term `Error "handler" [
+        "Failed on device '"; dev.name; "' with the ";
+        "error: \n\t'";
         Printexc.to_string exn;
         "'.";
       ];
@@ -45,9 +44,9 @@ let handle_errors = function
     end
   | ((Bad exn_after_mounting), dev) ->
     begin
-      Msg.term `Error "handle_errors" [
-        "Getmed failed on device '"; dev.name; "' with the ";
-        "error: '";
+      Msg.term `Error "handler" [
+        "Failed on device '"; dev.name; "' with the ";
+        "error: \n\t'";
         Printexc.to_string exn_after_mounting;
         "'.";
       ];
@@ -62,10 +61,15 @@ let bind_result f v = Result.Monad.bind v f
     . think
 *)
 let handle_devices ~(settings:Rc2.config) () =
-  let outer_settings = settings in
+  let getmed_settings = settings in
   let rec loop devices () =
     match devices with
     | dev :: tl when dev.active ->
+      Msg.term `Major "handler" [
+        "Starting transfer for device '";
+        dev.name;
+        "'."
+      ];
       begin
         StateResult.return ~settings:dev ()
         >>= Dev.find 
@@ -73,7 +77,7 @@ let handle_devices ~(settings:Rc2.config) () =
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
 
         >>= Media.search 
-        >>? Rc2.print_dev_config ~debug:outer_settings.debug
+        >>? Rc2.print_dev_config ~debug:getmed_settings.debug
 
         >>= fun ~settings media -> 
         StateResult.return () ~settings
@@ -89,8 +93,8 @@ let handle_devices ~(settings:Rc2.config) () =
   loop settings.devices ()
 
 let print_success ~settings () = Ok (
-    Msg.term `Notif "main" [
-      "Ran succesfully for all devices."
+    Msg.term `Major "main" [
+      "Ran succesfully for all active devices."
     ]
   ), settings  
 
