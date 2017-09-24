@@ -1,6 +1,6 @@
-
 <src/**>: include
 true: \
+  safe_string, \
   thread, \
   package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime,batteries,text,text.pcre,textwrap, pcre, lambda-term)
 
