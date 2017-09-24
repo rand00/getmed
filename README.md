@@ -19,8 +19,7 @@ This is currently a work in progress to become a version 2. Mostly some minor ch
 
 You supply settings in two ways:
 1. A `.getmedrc` in your `$HOME` folder or current working directory. See `getmed --template-rc`.
-2. Cmd-line arguments -- primarily for naming of the new folders
-   to be created. See `getmed --help`.
+2. Cmd-line arguments, e.g. supplying a name for the current transfers. See `getmed --help`.
 
 .. A more thorough howto will come when `getmed` reaches v2. If you want to use `getmed` now - run `getmed --help`.
 
