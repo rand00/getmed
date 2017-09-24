@@ -64,7 +64,7 @@ let dirs_fix ~settings () =
     ( create_dirs @@ concat_titles `Img ~settings >>= fun _ -> 
       create_dirs @@ concat_titles `Vid ~settings )
   | `None -> 
-    ( Msg.term `Notif "fix media directories"
+    ( Msg.term `Notif "setup media directories"
         [ "No media-files were present on the device." ];
       Bad MediaNotPresent )
 
