@@ -90,30 +90,6 @@ let human_readable_bytes bytes =
     
 (** Progress printing*)
 
-(*goto exchange prev_len with size of terminal
-  - for rewriting to new progress function + new cp
-  or just print init len term
-*)
-let progress_old ~full_size ~trans_size ~prev_len file = 
-  let open Media_types in
-  let f = Float.of_int in
-  let progress_len =
-    (f trans_size /. f full_size) *. 15. 
-    |> Int.of_float in
-  let progress_bar = String.make progress_len '|' in
-  let final_string =
-    Printf.sprintf "> [%-15s] [%4s / %4s] Transferring '%s'  \r" 
-      progress_bar
-      (human_readable_bytes (trans_size+file.size))
-      (human_readable_bytes full_size)
-      file.path in
-  begin
-    print_string @@ String.make prev_len ' ' ^ "\r";
-    print_string final_string;
-    flush stdout;
-  end;
-  String.length final_string
-
 let human_readable_time ~pr_second p =
   let second = pr_second in
   let minute = second * 60 in
@@ -137,13 +113,6 @@ let human_readable_time ~pr_second p =
   else 
     s "%1.1f second(s)" (float p /. float second)
 
-(* goto use 
-   . LTerm.clear_line
-   . LTerm.print[l]s (print styled on stdout)
-   . LTerm_text.eval [...]
-*)
-
-(*goto make like old progress output *)
 let progress
     ~start_time
     ~full_transfer_size
