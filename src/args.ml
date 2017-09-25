@@ -104,21 +104,18 @@ let handle_all () =
 
 open Rc2
 
-(*goto why did I use fold_left_result.. *)
 let update_rc args ~settings () = 
-  List.fold_left_result (fun settings_acc -> function 
+  List.fold_left (fun settings_acc -> function 
       | `Append_title s ->
         let devices =
           List.map (fun d -> { d with folders_append = s })
             settings_acc.devices
         in
-        Ok { settings_acc with devices } 
+        { settings_acc with devices } 
       | `Debug b ->
-        Ok { settings_acc with debug = b }
+        { settings_acc with debug = b }
     ) settings args
-  |> function
-  | Ok settings -> (Ok ()), settings
-  | (Bad _) as bad -> bad, settings
+  |> fun settings -> (Ok ()), settings
 
 
 (**For updating settings from cmd-line args*)

@@ -324,10 +324,9 @@ let transfer ~settings media () =
   let result_copy = 
     List.fold_left_result (fun prev_transf file ->
         begin
-          (* "\rCopying '%s'\n" *)
           let c i = LTerm_style.index i in
+          (*>goto supply as theme - set in config*)
           let c1 (*anglebrackets*) = c 1 in
-          (*<goto supply as theme - set in config*)
           let c2 (*special text*) = c 2 in
           let c3 (*numbers*) = c 3 in
           let filename_markup = LTerm_text.([
