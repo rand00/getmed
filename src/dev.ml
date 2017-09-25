@@ -53,9 +53,8 @@ let find ~settings () =
   , settings
   with Not_found ->
     ( Msg.term `Error "find device"
-        [ "There is no relevant device present, ";  
-          "or you have not run getmed with the proper ";
-          "rights." ];
+        [ "The device '"; settings.name; "' is not connected, ";
+          "or you have not run getmed with enough rights." ];
       (Bad DeviceNotPresent), settings
     )
 

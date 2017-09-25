@@ -27,28 +27,33 @@ module S = StateResult.Settings
 (* goto rewrite all modules to use rresult? *)
 
 let handle_errors = function 
-  | ((Ok _), dev) -> 
-    ( Msg.term `Major "handler" [
-          "Ran succesfully for device '"; dev.name;"'."
-        ];
-      Ok ())
-  | ((Bad (BeforeMounting exn )), dev) ->
+  | ((Ok _), dev) ->
+    begin
+      Msg.term `Major "handler" 
+        [ "Ran succesfully for device '"; dev.name;"'." ];
+      Ok ()
+    end
+  | (Bad DeviceNotPresent, dev) ->
+    begin
+      Msg.term `Notif "handler"
+        [ "Trying next device instead." ];
+      Ok ()
+    end
+  | (Bad (BeforeMounting exn), dev) ->
     begin
       Msg.term `Error "handler" [
         "Failed on device '"; dev.name; "' with the ";
-        "error: \n\t'";
+        "error: \n\t";
         Printexc.to_string exn;
-        "'.";
       ];
       exit 1
     end
-  | ((Bad exn_after_mounting), dev) ->
+  | (Bad exn_after_mounting, dev) ->
     begin
       Msg.term `Error "handler" [
         "Failed on device '"; dev.name; "' with the ";
-        "error: \n\t'";
+        "error: \n\t";
         Printexc.to_string exn_after_mounting;
-        "'.";
       ];
       Dev.unmount ~settings:dev () |> ignore;
       exit 1
@@ -93,9 +98,11 @@ let handle_devices ~(settings:Rc2.config) () =
   loop settings.devices ()
 
 let print_success ~settings () = Ok (
-    Msg.term `Major "main" [
-      "Ran succesfully for all active devices."
-    ]
+    let msg = match List.exists (fun d -> d.active) settings.devices with
+      | false -> "No active devices."
+      | true  -> "Ran succesfully for active devices."
+    in
+    Msg.term `Major "main" [ msg ]
   ), settings  
 
 (**Run `getmed with super-user rights (for blkid and mounting)*)
