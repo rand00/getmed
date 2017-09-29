@@ -28,18 +28,20 @@ module T = struct
   type t = cli_arg
 end
 open T
-    
+
 let handle_all () = 
   let make_indent ?(extra_indent=0) ?(arg_parse_std=5) arg = 
     String.make 
       (arg_parse_std + (String.length arg) + extra_indent) ' '
   in
   let template_rc_arg = "--template-rc"
+  and print_rc_options_arg = "--print-rc-options"
   and append_short_arg = "-a"
   and append_long_arg = "--append"
   and debug_arg = "--debug"
   in
-  let std_rc_indent = make_indent template_rc_arg
+  let template_rc_indent = make_indent template_rc_arg
+  and print_rc_options_indent = make_indent print_rc_options_arg
   and append_short_indent = make_indent ~extra_indent:7 append_short_arg
   and append_long_indent = make_indent ~extra_indent:7 append_long_arg
   and debug_indent = make_indent ~extra_indent:7 debug_arg
@@ -48,7 +50,7 @@ let handle_all () =
     "<title> : Appends a given title to the media-directories names" 
   in
   let args_acc = ref [] in
-  
+
   Arg.parse 
     [ ( append_short_arg, 
         Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
@@ -66,18 +68,29 @@ let handle_all () =
           [ append_title_doc ] );
       ( template_rc_arg, 
         Arg.Unit (fun () -> 
-          Rc2.get_template () 
-          |> print_endline; 
-          exit 0),
+            Rc2.get_template () |> print_endline; 
+            exit 0),
         Msg.termwrap 
-          ~initial_indent:std_rc_indent
-          ~subsequent_indent:std_rc_indent
-          ~initial_nonwrap:(String.length std_rc_indent)
+          ~initial_indent:template_rc_indent
+          ~subsequent_indent:template_rc_indent
+          ~initial_nonwrap:(String.length template_rc_indent)
           [ ": Prints a template rc-format to std-out; ";
             "use this for generating your first rc by piping ";
-            "output to a '.getmedrc'-file in your ";
+            "output to '.getmedrc' in your ";
             "home folder or current working directory."; 
           ] ); 
+      ( print_rc_options_arg,
+          Arg.Unit (fun () -> 
+            Rc2.get_rc_options () |> print_endline; 
+              exit 0),
+        Msg.termwrap 
+          ~initial_indent:print_rc_options_indent
+          ~subsequent_indent:print_rc_options_indent
+          ~initial_nonwrap:(String.length print_rc_options_indent)
+          [ ": Prints the possible options to set on various "
+          ; "fields in the rc-format."; 
+          ] ); 
+
       ( debug_arg, 
         Arg.Unit (fun () -> args_acc := ((`Debug true) :: !args_acc)),
         Msg.termwrap 
@@ -93,13 +106,13 @@ let handle_all () =
         ~initial_indent:""
         ~subsequent_indent:""
         ~initial_nonwrap:1
-        [ "\nGetmed is a cmd-line program for automatically ";
+        [ "\nGetmed is a CLI program for semi-automatically ";
           "transferring media from a connected camera device. ";
           "Make a '.getmedrc' file in your home-folder or ";
-          "current working directory to specify your personal ";
+          "current working directory to specify your cameras ";
           "settings."; ]) 
      ^ "\n\n*** Arguments ***");
-  
+
   !args_acc (* the accumulated arguments returned *)
 
 open Rc2
