@@ -1,4 +1,5 @@
 <src/**>: include
+<lib_batext/**>: include
 true: \
   safe_string, \
   thread, \
@@ -7,6 +8,9 @@ true: \
 <src/dev.*> or <lib_batext/**>: \
   syntax(camlp4o), \
   package(text.pcre-syntax)
+
+<tests_/test_lsblk_match.*>: \
+  package(astring, rresult, ppx_deriving.show, pcre)
 
 #<src/rc2.ml>: \
 #  package(ppx_deriving_yojson)

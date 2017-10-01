@@ -4,6 +4,10 @@ B _build/src
 S lib_batext
 B _build/lib_batext
 
+PKG rresult
+PKG astring
+
+PKG ppx_deriving.show
 PKG ppx_deriving_yojson
 
 PKG yojson
