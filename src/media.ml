@@ -237,7 +237,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
             | [] -> 
               ( Msg.term `Notif "media search"
                   [ "No media files present in the specified ";
-                    "device subfolder." ];
+                    "device subfolder, '"; subdir;"'." ];
                 (Ok ([], `None), settings) )
             | file_list -> ((Ok (file_list, types_to_transfer)), settings)))
 
