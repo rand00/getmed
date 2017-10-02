@@ -21,63 +21,154 @@ open BatExt
 open Result.Monad
 open Exceptions
 
-let is_eos = function
-  | <:re< _* "EOS_DEVEL" >> -> true
-  | <:re< _* "EOS_DIGITAL" >> -> true
-  | _ -> false
+type device = {
+  name : string;
+  fstype : string;
+  label : string;
+  uuid : string;
+  mountpoint : string;
+} [@@ deriving show]
+
+
+module Parse = struct
+
+  open Rresult
+  open Astring
+  open String
+
+  type device_parse_error = [
+    | `Equals
+    | `Ident
+    | `Value
+    | `White
+  ] [@@ deriving show]
+
+  let print_device = function
+    | Ok s -> print_endline @@ show_device s
+    | Error e -> 
+      print_endline ("Error: " ^ show_device_parse_error e)
+
+  let print_and_run place f s =
+    print_endline (place ^ String.Sub.to_string s);
+    f s
+
+  let drop_white s = Ok (Sub.drop ~sat:Char.Ascii.is_white s)
+      
+  let parse_equals s = match Sub.head s with
+    | Some '=' -> Ok (Sub.tail s)
+    | Some _ | None -> Error `Equals 
+
+  let parse_value s = match String.Sub.head s with
+    | Some '"' -> 
+      let is_data = function '\\' | '"' -> false | _ -> true in
+      let rec loop acc s =
+        let data, rem = String.Sub.span ~sat:is_data s in
+        match String.Sub.head rem with
+        | Some '"' ->
+          let acc = List.rev (data :: acc) in
+          Ok (String.Sub.(to_string @@ concat acc), (String.Sub.tail rem))
+        | Some '\\' ->
+          let rem = String.Sub.tail rem in
+          begin match String.Sub.head rem with
+            | Some ('"' | '\\' as c) ->
+              let acc = String.(sub (of_char c)) :: data :: acc in
+              loop acc (String.Sub.tail rem)
+            | Some _ | None -> Error `Value
+          end
+        | None | Some _ -> Error `Value
+      in
+      loop [] (String.Sub.tail s)
+    | Some _ ->
+      let is_data c = not (Char.Ascii.is_white c) in
+      let data, rem = String.Sub.span ~sat:is_data s in
+      Ok (Sub.to_string data, rem)
+    | None -> Ok ("", s)
+
+  let parse_kv ident s =
+    match
+      drop_white s
+      >>| Sub.is_prefix ~affix:(Sub.v ident) 
+    with
+    | Ok true ->
+      Sub.drop ~sat:(fun c ->
+          Char.Ascii.(is_letter c || is_white c)
+        ) s
+      (*< goto this should be one step instead of two *)
+      |> drop_white
+      >>= parse_equals (*print_and_run "equals got:"*) 
+      >>= drop_white
+      >>= parse_value >>| fun (value, s) -> 
+      value, s
+    | Ok false -> Error `Ident
+    | Error _ as e -> e
+
+  let parse_device lsblk =
+    let s = Sub.v lsblk in
+    parse_kv "NAME" s >>= fun (name_value, s) ->
+    parse_kv "FSTYPE" s >>= fun (fstype_value, s) -> 
+    parse_kv "LABEL" s >>= fun (label_value, s) ->
+    parse_kv "UUID" s >>= fun (uuid_value, s) ->
+    parse_kv "MOUNTPOINT" s >>| fun (mountpoint_value, s) -> 
+    { name = name_value;
+      fstype = fstype_value;
+      label = label_value;
+      uuid = uuid_value;
+      mountpoint = mountpoint_value;
+    }
+
+end
 
 let pmatch ~pattern s = Pcre.pmatch ~pat:pattern s
 
-(*goto factor out is-device checking all user-patterns*)
-let is_device device_match blkid_line =
-  List.exists (fun pattern ->
-      pmatch
-        ~pattern:(
-          match pattern with
-          | `Uuid p -> " UUID=\"" ^ p ^ "\""
-          | `Label p -> " LABEL=\"" ^ p ^ "\""
-        )
-        blkid_line
+(*goto? factor out is-device checking all user-patterns*)
+let is_device device_match dev =
+  List.exists (function 
+      | `Uuid pattern -> pmatch ~pattern dev.uuid
+      | `Label pattern -> pmatch ~pattern dev.label
     ) device_match
 
-(*goto make able to find any dev based on settings*)
-(*goto trap exceptions in monad (and in all other functions)*)
-let find ~settings () = 
+let find_aux parse_dev is_dev = 
+  Unix.command_getlines
+    "lsblk -Pp -o name,fstype,label,uuid,mountpoint" 
+  |> BatEnum.map parse_dev 
+  |> BatList.of_enum 
+  |> CCList.find_map is_dev 
+
+let find ~settings () =
+  let open Rresult in
   let open Rc2 in
-  let blkid = Unix.command_getlines "blkid" in
-  try 
-    (Ok (Enum.find (is_device settings.device_match) blkid 
-         |> (function 
-             | <:re< ("/dev/" _* as dev) ":" >> -> dev 
-             | _ -> "")))
-  , settings
-  with Not_found ->
+  find_aux Parse.parse_device (function
+      | Ok dev when is_device settings.device_match dev -> Some dev
+      | Ok _ -> None
+      | Error _ ->
+        Msg.term `Notif "parse device"
+          [ "Failed to parse some device." ];
+        None 
+    )
+  |> function
+  | Some dev -> BatResult.Ok dev, settings
+  | None ->
     ( Msg.term `Error "find device"
         [ "The device '"; settings.name; "' is not connected, ";
           "or you have not run getmed with enough rights." ];
-      (Bad DeviceNotPresent), settings
+      (BatResult.Bad DeviceNotPresent), settings
     )
-
 
 let get_dir_if_mounted dev dir =
-  Ok (Unix.command_getlines "mount")
-  >>= (fun mount_lines -> 
-      try 
-        Enum.find (Pcre.pmatch ~pat:("^" ^ dev)) mount_lines
-        |> function 
-        | <:re< [^" "]* " on " ( [^" "]{1+} as dir_existing ) >> -> 
-          ( Msg.term `Notif "mount"
-              [ "Device '"; dev; "' already mounted at '";
-                dir_existing; "'. Will use existing ";
-                "mountpoint." ];
-            Ok (`Dont_mount dir_existing) )
-        | _ -> Ok (`Mount dir) (*will not happen*)
+  match dev.mountpoint with
+  | dir_existing when
+      Sys.file_exists dir_existing
+      && Sys.is_directory dir_existing ->
+    begin
+      Msg.term `Notif "mount"
+        [ "Device '"; dev.name; "' already mounted at '";
+          dir_existing; "'. Will use existing ";
+          "mountpoint." ];
+      Ok (`Dont_mount dir_existing)
+    end
+  | _ -> Ok (`Mount dir) 
 
-      with Not_found -> 
-        Ok (`Mount dir)
-    )
-
-let mountpoint_fix_or_find dev dir = 
+let mountpoint_fix_or_find (dev:device) dir = 
   get_dir_if_mounted dev dir
   >>= function
   | (`Dont_mount dir_existing) as dir_and_action -> 
@@ -110,16 +201,18 @@ let mountpoint_fix_or_find dev dir =
           Bad exn
       )
 
-
 let mount dev = function
   | `Dont_mount dir -> Ok dir
   | `Mount dir ->   
     (Sys.command 
        (String.concat " " 
-          [ "mount"; dev; (dir |> Folder.escape) ]) 
+          [ "mount"; dev.name; (dir |> Folder.escape) ]) 
      |> function 
      | 0 -> 
-       ( Msg.term `Notif "mount" [ "Mount succesful." ]; 
+       ( Msg.term `Notif "mount" [
+             "Mount of device '"; dev.name;
+             "' succesful."
+           ]; 
          Ok dir )
      | errcode -> 
        ( Msg.term `Error "mount" 
@@ -128,8 +221,7 @@ let mount dev = function
              "' - see 'man mount' for more info." ];
          Bad MountError ))
 
-
-let mount_smartly ~settings dev =
+let mount_smartly ~settings (dev:device) =
   let open Rc2 in
   begin
     mountpoint_fix_or_find dev settings.mount_path
