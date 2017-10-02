@@ -3,7 +3,10 @@ S src
 B _build/src
 S lib_batext
 B _build/lib_batext
+S tests_
+B _build/tests_
 
+PKG containers
 PKG rresult
 PKG astring
 
