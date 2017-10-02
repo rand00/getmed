@@ -160,7 +160,7 @@ let foo = {
 let find () = 
   try BatResult.Ok (
     List.find Sys.file_exists  
-      [ (Sys.getcwd ()) /: ".getmedrc";
+      [ (*(Sys.getcwd ()) /: ".getmedrc";*)
         (Sys.getenv "HOME") /: ".getmedrc" ] )
   with Not_found -> BatResult.Bad RcNotFound
   (*< note: this exn matches both 'find' and 'getenv'*)
