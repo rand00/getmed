@@ -47,6 +47,10 @@ let set_user_as_owner f =
     getlogin () |> getpwnam in
   chown f pw_uid pw_gid 
 
+let size_4k = Int.pow 2 12 
+let size_1m = Int.pow 2 20 
+let cp_buffer_size = size_1m 
+
 (*note: only for copying non-directories for now*)
 let cp ~progress fi fo =
   let fo =
@@ -57,13 +61,10 @@ let cp ~progress fi fo =
   in
   let i = File.open_in fi
   and o, pos_cb = IO.pos_out @@ File.open_out fo in
-  let size_4k = Int.pow 2 12 in
-  let size_1m = Int.pow 2 20 in
-  let buffer = size_1m / 10 in
   begin
     try
       while true do
-        IO.nread i buffer |> IO.nwrite o;
+        IO.nread i cp_buffer_size |> IO.nwrite o;
         progress @@ pos_cb ()
       done
     with IO.No_more_input -> ()
