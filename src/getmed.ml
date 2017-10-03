@@ -105,17 +105,19 @@ let print_success ~settings () = Ok (
     Msg.term `Major "main" [ msg ]
   ), settings  
 
-(**Run `getmed with super-user rights (for blkid and mounting)*)
-(*< goto there exist a way to get blkid without su-rights *)
-(* goto lookup way to mount with user without su-rights *)
-
 let getmed ~(settings:Rc2.config) ~cli_args = 
-  StateResult.return ~settings ()
-  >>= S.lift Rc2.find
-  >>= Rc2.read_from_file
-  >>= Args.update_rc cli_args
-  >>= S.read handle_devices
-  >>= print_success
+  begin match Args.split_config cli_args with
+    | Some path, cli_args -> Ok (path, cli_args), settings
+    | None     , cli_args -> 
+      let r = Rc2.find () |> Result.map (fun path -> path, cli_args)
+      in r, settings
+  end
+  >>= fun ~settings (path, cli_args) -> (
+    Rc2.read_from_file ~settings path 
+    >>= Args.update_rc cli_args 
+    >>= S.read handle_devices 
+    >>= print_success
+  )
 
 let _ = 
   getmed 

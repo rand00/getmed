@@ -30,6 +30,15 @@ module T = struct
 end
 open T
 
+let rec split_config args = 
+  let rec aux path_opt conf_acc = function
+    | [] -> path_opt, conf_acc
+    | `Config_path p :: tl -> aux (Some p) conf_acc tl
+    | (`Append_title _ as hd)::tl
+    | (`Debug _        as hd)::tl -> aux path_opt (hd::conf_acc) tl
+  in
+  aux None [] args
+
 let handle_all () = 
   let make_indent ?(extra_indent=0) ?(arg_parse_std=5) arg = 
     String.make 
