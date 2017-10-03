@@ -205,10 +205,11 @@ let validate_settings s =
 
 (*goto continue writing interface*)
 let read_from_file ~settings file =
-    Yojson.Safe.from_file file
-    |> config_of_yojson
-    |> function
-    | Result.Ok settings' -> (
+  (*> goto catch exceptions from this*)
+  Yojson.Safe.from_file file
+  |> config_of_yojson (*< test this for when we have extra fields *)
+  |> function
+  | Result.Ok settings' -> (
       Msg.term `Notif "update RC" [
         "Sucesfully parsed config-file."
       ];
@@ -216,7 +217,7 @@ let read_from_file ~settings file =
       | BatResult.Ok () as r -> r, settings'
       | BatResult.Bad _ as r -> r, settings
     )
-    | Result.Error e -> BatResult.Bad (RcParseError e), settings
+  | Result.Error e -> BatResult.Bad (RcParseError e), settings
 
     (* failwith "todo" *)
 (*

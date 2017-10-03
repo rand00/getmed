@@ -22,6 +22,7 @@ open BatExt
 module T = struct 
   type cli_arg = [
     | `Append_title of string
+    | `Config_path of string
     | `Debug of bool
   ]
 
@@ -38,21 +39,34 @@ let handle_all () =
   and print_rc_options_arg = "--print-rc-options"
   and append_short_arg = "-a"
   and append_long_arg = "--append"
+  and config_path_long_arg = "--rc"
   and debug_arg = "--debug"
   in
   let template_rc_indent = make_indent template_rc_arg
   and print_rc_options_indent = make_indent print_rc_options_arg
   and append_short_indent = make_indent ~extra_indent:7 append_short_arg
   and append_long_indent = make_indent ~extra_indent:7 append_long_arg
+  and config_path_long_indent = make_indent ~extra_indent:7 config_path_long_arg
   and debug_indent = make_indent ~extra_indent:7 debug_arg
   in
   let append_title_doc = 
-    "<title> : Appends a given title to the media-directories names" 
+    "<title> : Appends a given title to the media-directories names"
+  and config_path_doc =
+    "<file-path> : Sets the configuration-file to use."
   in
   let args_acc = ref [] in
 
   Arg.parse 
-    [ ( append_short_arg, 
+    [
+      ( config_path_long_arg, 
+        Arg.String (fun s -> args_acc := ((`Config_path s) :: !args_acc)),
+        Msg.termwrap 
+          ~initial_indent:config_path_long_indent
+          ~subsequent_indent:config_path_long_indent
+          ~initial_nonwrap:(String.length config_path_long_indent)
+          [ config_path_doc ] );
+
+      ( append_short_arg, 
         Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
         Msg.termwrap 
           ~initial_indent:append_short_indent
@@ -66,6 +80,7 @@ let handle_all () =
           ~subsequent_indent:append_long_indent
           ~initial_nonwrap:(String.length append_long_indent)
           [ append_title_doc ] );
+
       ( template_rc_arg, 
         Arg.Unit (fun () -> 
             Rc2.get_template () |> print_endline; 
