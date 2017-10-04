@@ -24,4 +24,11 @@ type media_file = {
   size : int
 }
 
+(*goto map media_files to this type using destinations *)
+type media_transfer = {
+  mt_path : string;
+  mt_dest : string;
+  mt_typ : media_type;
+  mt_size : int;
+}
 

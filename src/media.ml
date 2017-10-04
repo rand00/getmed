@@ -230,7 +230,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
         >>= (fun ~settings media_list -> 
             let types_to_transfer =
               which_media_types
-                (fun file -> file.typ)
+                (fun (file:media_file) -> file.typ)
                 media_list
             in 
             match media_list with 
@@ -316,7 +316,7 @@ let map_result f v = BatResult.Monad.(
 
 let (>|=) v f = map_result f v 
 
-let transfer ~settings media () =
+let transfer ~settings (media:media_file list) () =
   let open BatResult.Infix in
   let full_transfer_size = 
     List.fold_left (fun acc file -> acc + file.size) 0 media in
