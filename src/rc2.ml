@@ -101,9 +101,9 @@ let folder_prefix settings =
 let template_rc = {
   name = "camera-name";
   active = true;
-  device_match = [ `Label "DEVICE-LABEL-REGEX" ];
+  device_match = [ `Label "<perl-compatible-regexp>" ];
   mount_path = "/place/to/mount/device";
-  search_subdirs = [ `Recurse "/subtree/within/device/to/search" ];
+  search_subdirs = [ `Recurse "subtree/within/device/to/search" ];
   types_to_transfer = `All;
   
   image_exts = [ "jpg"; "cr2"; "arw"; ];
@@ -111,9 +111,9 @@ let template_rc = {
   video_exts = [ "mov"; "avi"; "mp4" ];
   video_meta_exts = [ "xml" ];
 
-  folders_append = "folder_appended_title";
+  folders_append = "<string-title_to_append_to_folders>";
   folders_append_cam_name = false;
-  folders_prepend = `String "folder_prepend_string";
+  folders_prepend = `Date;
 
   image_destinations = [ "/image/root/destinations" ];
   video_destinations = [ "/video/root/destinations" ];
@@ -254,7 +254,7 @@ let get_rc_options () =
   in
   String.concat "\n" [
     rc_option_string "device_match"
-      [ `Uuid "<regexp>"; `Label "<regexp>" ]
+      [ `Uuid "<perl-compatible-regexp>"; `Label "<perl-compatible-regexp>" ]
       ~to_string:(aux device_match_to_yojson);
     rc_option_string "search_subdir"
       [ `Recurse "<sub-directory>"; `Only "<sub-directory>" ]
