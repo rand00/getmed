@@ -9,6 +9,7 @@
 /test_*
 /core_rand
 .getmedrc_example
+.getmedrc_test
 /tests_
 /tests_rc
 /sync_lib_batext.sh
