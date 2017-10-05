@@ -64,9 +64,10 @@ let cp ~progress fi fo =
   begin
     try
       while true do
+        progress @@ pos_cb ();
         IO.nread i cp_buffer_size |> IO.nwrite o;
-        progress @@ pos_cb ()
-      done
+      done;
+      progress @@ pos_cb ();
     with IO.No_more_input -> ()
   end;
   IO.close_in i;

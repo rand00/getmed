@@ -280,11 +280,11 @@ let copy_file ~settings ~progress file =
           "' occured on copying file." ]
   in
   List.fold_left_result
-    (fun () destination_path ->
+    (fun () destination_folder ->
        let destination_file =
-         (destination_path /: Filename.basename file.path) in
+         (destination_folder /: Filename.basename file.path) in
        begin match Sys.file_exists destination_file with
-         | false -> Ok destination_path
+         | false -> Ok destination_folder
          | true ->
            print_endline "";
            Msg.term `Error "copy file" [
@@ -337,7 +337,8 @@ let transfer ~settings (media:media_file list) () =
           let open Lwt in
           Lazy.force LTerm.stdout >>= fun stdout ->
           LTerm.clear_line_next stdout >>= fun () ->
-          LTerm.fprintls stdout @@ LTerm_text.eval filename_markup
+          LTerm.fprintls stdout @@ LTerm_text.eval filename_markup >>= fun () ->
+          LTerm.flush stdout
         end
         |> Lwt_main.run;
 
