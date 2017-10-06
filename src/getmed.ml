@@ -33,7 +33,7 @@ let handle_errors = function
         [ "Ran succesfully for device '"; dev.name;"'." ];
       Ok ()
     end
-  | (Bad DeviceNotPresent, dev) ->
+  | (Bad (BeforeMounting DeviceNotPresent), dev) ->
     begin
       Msg.term `Notif "handler"
         [ "Trying next device instead." ];

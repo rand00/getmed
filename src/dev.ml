@@ -148,7 +148,7 @@ let find ~settings () =
   |> function
   | Some dev -> BatResult.Ok dev, settings
   | None ->
-    ( Msg.term `Error "find device"
+    ( Msg.term `Notif "find device"
         [ "The device '"; settings.name; "' is not connected, ";
           "or you have not run getmed with enough rights." ];
       (BatResult.Bad DeviceNotPresent), settings
