@@ -93,6 +93,7 @@ let handle_devices ~(settings:Rc2.config) () =
       end
       |> handle_errors
       |> bind_result (loop tl)
+    | _ :: tl -> loop tl ()
     | _ -> Ok ()
   in
   loop settings.devices ()
