@@ -44,7 +44,7 @@ let handle_all () =
     String.make 
       (arg_parse_std + (String.length arg) + extra_indent) ' '
   in
-  let template_rc_arg = "--template-rc"
+  let template_rc_arg = "--print-template-rc"
   and print_rc_options_arg = "--print-rc-options"
   and append_short_arg = "-a"
   and append_long_arg = "--append"
@@ -67,29 +67,6 @@ let handle_all () =
 
   Arg.parse 
     [
-      ( config_path_long_arg, 
-        Arg.String (fun s -> args_acc := ((`Config_path s) :: !args_acc)),
-        Msg.termwrap 
-          ~initial_indent:config_path_long_indent
-          ~subsequent_indent:config_path_long_indent
-          ~initial_nonwrap:(String.length config_path_long_indent)
-          [ config_path_doc ] );
-
-      ( append_short_arg, 
-        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
-        Msg.termwrap 
-          ~initial_indent:append_short_indent
-          ~subsequent_indent:append_short_indent
-          ~initial_nonwrap:(String.length append_short_indent)
-          [ append_title_doc ] );
-      ( append_long_arg, 
-        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
-        Msg.termwrap 
-          ~initial_indent:append_long_indent
-          ~subsequent_indent:append_long_indent
-          ~initial_nonwrap:(String.length append_long_indent)
-          [ append_title_doc ] );
-
       ( template_rc_arg, 
         Arg.Unit (fun () -> 
             Rc2.get_template () |> print_endline; 
@@ -98,11 +75,10 @@ let handle_all () =
           ~initial_indent:template_rc_indent
           ~subsequent_indent:template_rc_indent
           ~initial_nonwrap:(String.length template_rc_indent)
-          [ ": Prints a template rc-format to std-out; ";
-            "use this for generating your first rc by piping ";
-            "output to '.getmedrc' in your ";
-            "home folder or current working directory."; 
-          ] ); 
+          [ ": Prints a template rc-format to std-out. ";
+            "Use this for generating your first rc, and";
+            "then change it to fit your own settings."
+          ]); 
       ( print_rc_options_arg,
           Arg.Unit (fun () -> 
             Rc2.get_rc_options () |> print_endline; 
@@ -114,6 +90,29 @@ let handle_all () =
           [ ": Prints the possible options to set on various "
           ; "fields in the rc-format."; 
           ] ); 
+
+      ( config_path_long_arg, 
+        Arg.String (fun s -> args_acc := ((`Config_path s) :: !args_acc)),
+        Msg.termwrap 
+          ~initial_indent:config_path_long_indent
+          ~subsequent_indent:config_path_long_indent
+          ~initial_nonwrap:(String.length config_path_long_indent)
+          [ config_path_doc ] );
+
+      ( append_long_arg, 
+        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
+        Msg.termwrap 
+          ~initial_indent:append_long_indent
+          ~subsequent_indent:append_long_indent
+          ~initial_nonwrap:(String.length append_long_indent)
+          [ append_title_doc ] );
+      ( append_short_arg, 
+        Arg.String (fun s -> args_acc := ((`Append_title s) :: !args_acc)),
+        Msg.termwrap 
+          ~initial_indent:append_short_indent
+          ~subsequent_indent:append_short_indent
+          ~initial_nonwrap:(String.length append_short_indent)
+          [ "<title> : See argument '"; append_long_arg;"'." ] );
 
       ( debug_arg, 
         Arg.Unit (fun () -> args_acc := ((`Debug true) :: !args_acc)),
@@ -130,11 +129,11 @@ let handle_all () =
         ~initial_indent:""
         ~subsequent_indent:""
         ~initial_nonwrap:1
+        ~override_maxwidth:80
         [ "\nGetmed is a CLI program for semi-automatically ";
           "transferring media from a connected camera device. ";
-          "Make a '.getmedrc' file in your home-folder or ";
-          "current working directory to specify your cameras ";
-          "settings."; ]) 
+          "Make a '.getmedrc' file in your home-folder to ";
+          "specify your cameras settings."; ]) 
      ^ "\n\n*** Arguments ***");
 
   !args_acc (* the accumulated arguments returned *)

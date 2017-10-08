@@ -32,10 +32,13 @@ let termwrap
     ?(subsequent_indent="  ") 
     ?(drop_whitespace=true)
     ?(replace_whitespace=true)
+    ?override_maxwidth
     ss = 
   String.concat "" ss
   |> (fun str -> 
-      let wrap_len = Unix.term_ncolumns () in
+      let wrap_len = match override_maxwidth with
+        | Some l -> l
+        | None -> Unix.term_ncolumns () in
       let (init_line, rest_str) = 
         (match initial_nonwrap with
          | 0 -> [], str
