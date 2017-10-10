@@ -76,11 +76,9 @@ let handle_devices ~(settings:Rc2.config) () =
         "'."
       ];
       begin
-        StateResult.return ~settings:dev ()
-        >>= Dev.find 
+        Dev.find ~settings:dev () 
         >>= Dev.mount_smartly
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
-
         >>= Media.search 
         >>? Rc2.print_dev_config ~debug:getmed_settings.debug
 
@@ -106,27 +104,15 @@ let print_success ~settings () = Ok (
     Msg.term `Major "main" [ msg ]
   ), settings  
 
-let getmed ~(settings:Rc2.config) cli_args = 
-  begin match Args.split_config cli_args with
-    | Some path, cli_args -> Ok (path, cli_args), settings
-    | None     , cli_args -> 
-      let r = Rc2.find () |> Result.map (fun path -> path, cli_args)
-      in r, settings
-  end
-  >>= fun ~settings (path, cli_args) -> (
-    Rc2.read_from_file ~settings path 
-    >>= Args.update_rc cli_args 
-    >>= S.read handle_devices 
-    >>= print_success
-  )
-
-let getmed' ~(settings:Rc2.config) =
+let getmed (settings:Rc2.config) =
   S.read handle_devices ~settings ()
   >>= print_success
 
-(*
-let _ = 
-  getmed ~settings:(Rc2.std) 
-  @@ Args.handle_all ()
-*)
+
+
+
+
+
+
+
 
