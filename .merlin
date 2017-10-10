@@ -6,6 +6,7 @@ B _build/lib_batext
 S tests_
 B _build/tests_
 
+PKG cmdliner
 PKG containers
 PKG rresult
 PKG astring
