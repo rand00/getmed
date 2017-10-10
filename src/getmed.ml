@@ -106,7 +106,7 @@ let print_success ~settings () = Ok (
     Msg.term `Major "main" [ msg ]
   ), settings  
 
-let getmed ~(settings:Rc2.config) ~cli_args = 
+let getmed ~(settings:Rc2.config) cli_args = 
   begin match Args.split_config cli_args with
     | Some path, cli_args -> Ok (path, cli_args), settings
     | None     , cli_args -> 
@@ -120,9 +120,13 @@ let getmed ~(settings:Rc2.config) ~cli_args =
     >>= print_success
   )
 
-let _ = 
-  getmed 
-    ~settings:(Rc2.std)
-    ~cli_args:(Args.handle_all ())
+let getmed' ~(settings:Rc2.config) =
+  S.read handle_devices ~settings ()
+  >>= print_success
 
+(*
+let _ = 
+  getmed ~settings:(Rc2.std) 
+  @@ Args.handle_all ()
+*)
 
