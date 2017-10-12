@@ -8,27 +8,39 @@ let update_rc_append_title title ~settings =
 
 let update_rc_debug debug settings = { settings with debug }
 
-let arg_handler config_path append_title debug =
-  let open Batteries in
-  let open StateResult.Infix in
-  let settings = Rc2.std in
-  let path = match config_path with
-    | Some path -> Ok path
-    | None -> Rc2.find () in
-  (path, settings)
-  >>= Rc2.read_from_file 
-  >>= fun ~settings () ->
-  append_title
-  |> Option.map (update_rc_append_title ~settings) 
-  |> Option.default settings
-  |> update_rc_debug debug
-  |> Getmed.getmed
+let arg_handler print_template show_rc_options = 
+  if print_template then (
+    Rc2.get_template () |> print_endline;
+    exit 0
+  );
+  if show_rc_options then (
+    Rc2.get_rc_options () |> print_endline;
+    exit 0
+  );
+  fun config_path append_title debug -> 
+    let open Batteries in
+    let open StateResult.Infix in
+    let settings = Rc2.std in
+    let path = match config_path with
+      | Some path -> Ok path
+      | None -> Rc2.find () in
+    (path, settings)
+    >>= Rc2.read_from_file 
+    >>= fun ~settings () ->
+    append_title
+    |> Option.map (update_rc_append_title ~settings) 
+    |> Option.default settings
+    |> update_rc_debug debug
+    |> Getmed.getmed
 
 open Cmdliner
 
 let config_path = 
-  let doc = "Sets the configuration-file to use." in
-  Arg.(value & opt (some file) None & info ["rc"] ~docv:"RC" ~doc)
+  let doc = "Sets the configuration-file to use. Mostly \
+             intended for testing rc-files as you can \
+             disable your devices within the rc-file." in
+  let docv = "RC_PATH" in
+  Arg.(value & opt (some file) None & info ["rc"] ~docv ~doc)
   
 let append_title =
   let doc = "Appends a given title to the media-directories names." in
@@ -38,12 +50,47 @@ let append_title =
 let debug = 
   let doc = "Turns on debug-printing." in
   Arg.(value & flag & info ["debug"] ~docv:"DEBUG" ~doc)
-  
+
+let print_template_rc =
+  let doc = "Prints a template for defining your own \
+             rc-file. Direct output at '~/.$(tname)rc'." in
+  let docv = "PRINT_TEMPLATE_RC" in
+  Arg.(value & flag & info ["print-template-rc"] ~docv ~doc)
+
+let show_rc_options =
+  let doc = "Prints the available options for the fields \
+             in the rc-format." in
+  let docv = "SHOW_RC_OPTIONS" in
+  Arg.(value & flag & info ["show-rc-options"] ~docv ~doc)
+
 let cmd =
   let version = "2.0.0" in
   let doc = "convenient and safe media-transfer and sorting." in
-  let man = [ ] in
-  Term.(const arg_handler $ config_path $ append_title $ debug),
+  let man = [
+    `S Manpage.s_description;
+    `P "A CLI program for semi-automatically \
+        transferring media from a connected camera device. \
+        Make a '.getmedrc' file in your home-folder to specify \
+        your cameras settings.";
+    `P "$(tname) is able to mount, transfer, sort, cleanup \
+        and unmount, depending on your rc- and cli-specification \
+        of how and what to do. Use options $(i, \
+        --print-template-rc) and $(i, --show-rc-options), to \
+        begin specifying your transfers.";
+    `P "If you use a system where mounting of devices is not \
+        done automatically, $(tname) can do this for you. But \
+        as the required user-rights can be hard to setup correctly \
+        in your /etc/fstab file to allow yourself as user to mount \
+        a device, $(tname) will need to be run with 'sudo -E \
+        $(tname) [..]'. If you mount and unmount yourself, \
+        $(tname) can be run as user (cleanup needs write-access \
+        for your user).";
+    `S Manpage.s_see_also;
+    `P "$(b,mount), $(b,unmount), $(b,fstab), $(b,sudo)"
+  ] in
+  Term.(const arg_handler
+        $ print_template_rc $ show_rc_options
+        $ config_path $ append_title $ debug),
   Term.(info "getmed" ~version ~doc ~man)
 
 let () = Term.(exit @@ eval cmd)

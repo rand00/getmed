@@ -111,12 +111,12 @@ let template_rc = {
   video_exts = [ "mov"; "avi"; "mp4" ];
   video_meta_exts = [ "xml" ];
 
-  folders_append = "<string-title_to_append_to_folders>";
+  folders_append = "<string-title-to-append-to-folders>";
   folders_append_cam_name = false;
   folders_prepend = `Date;
 
-  image_destinations = [ "/image/root/destinations" ];
-  video_destinations = [ "/video/root/destinations" ];
+  image_destinations = [ "/image/root/destination" ];
+  video_destinations = [ "/video/root/destination" ];
 
   cleanup = `Remove_originals;
   unmount = true;
