@@ -1,16 +1,5 @@
 open Rc2.T
 
-module T = struct 
-  type cli_arg = [
-    | `Append_title of string
-    | `Config_path of string
-    | `Debug of bool
-  ]
-
-  type t = cli_arg
-end
-open T
-
 let update_rc_append_title title ~settings =
   let devices = List.map (fun d ->
       { d with folders_append = title }
@@ -38,23 +27,24 @@ let arg_handler config_path append_title debug =
 open Cmdliner
 
 let config_path = 
-  let doc = "" in
+  let doc = "Sets the configuration-file to use." in
   Arg.(value & opt (some file) None & info ["rc"] ~docv:"RC" ~doc)
   
 let append_title =
-  let doc = "" in
-  Arg.(value & opt (some string) None & info ["a"; "append"]
-         ~docv:"APPEND_TITLE" ~doc)
+  let doc = "Appends a given title to the media-directories names." in
+  let docv = "APPEND_TITLE" in
+  Arg.(value & opt (some string) None & info ["a"; "append"] ~docv ~doc)
 
 let debug = 
-  let doc = "" in
+  let doc = "Turns on debug-printing." in
   Arg.(value & flag & info ["debug"] ~docv:"DEBUG" ~doc)
   
 let cmd =
+  let version = "2.0.0" in
   let doc = "convenient and safe media-transfer and sorting." in
   let man = [ ] in
   Term.(const arg_handler $ config_path $ append_title $ debug),
-  Term.(info "getmed" ~version:"%%VERSION%%" ~doc ~man)
+  Term.(info "getmed" ~version ~doc ~man)
 
 let () = Term.(exit @@ eval cmd)
 
