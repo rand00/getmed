@@ -20,6 +20,7 @@ open Batteries
 open BatExt
 open Result.Monad
 open Exceptions
+open Rc2.T
 
 type device = {
   name : string;
@@ -222,16 +223,11 @@ let mount dev = function
          Bad MountError ))
 
 let mount_smartly ~settings (dev:device) =
-  let open Rc2 in
-  begin
-    mountpoint_fix_or_find dev settings.mount_path
-    >>= mount dev
-  end
+  mountpoint_fix_or_find dev settings.mount_path
+  >>= mount dev
   |> function
   | Ok mount_path -> ((Ok ()), { settings with mount_path })
   | (Bad _) as bad -> (bad, settings)
-
-open Rc2.T
 
 let unmount ~settings () = 
   let s = settings in
@@ -239,7 +235,7 @@ let unmount ~settings () =
   | false -> 
     ( Msg.term `Notif "unmount" [
           "Not going to unmount device '";
-          settings.name; "'.";
+          s.name; "'.";
         ];
       Ok () )
   | true  -> 
@@ -248,13 +244,13 @@ let unmount ~settings () =
      | 0 -> 
        ( Msg.term `Notif "unmount" [
              "Unmount succesful for device '";
-             settings.name; "'.";
+             s.name; "'.";
            ]; 
          Ok () )
      | errcode -> 
        ( Msg.term `Error "unmount" [
              "Error occured during unmounting device '";
-             settings.name; "'.";
+             s.name; "'.";
              "Error-code was '";
              String.of_int errcode; "'."
            ];
