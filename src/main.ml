@@ -8,6 +8,27 @@ let update_rc_append_title title ~settings =
 
 let update_rc_debug debug settings = { settings with debug }
 
+let print_success settings = 
+  let msg = match List.exists (fun d -> d.active) settings.devices with
+    | false -> "No active devices."
+    | true  -> "Ran succesfully for active devices."
+  in
+  Msg.term `Major "main" [ msg ]
+
+let print_error exn_name s =
+  Msg.term `Error "main" [ exn_name;":\n\n"; s ];
+  exit 1
+    
+let print_error_exn exn =
+  Msg.term `Error "main" [ Printexc.to_string exn ];
+  exit 1
+
+let handle_errors_last (r, settings) = match r with
+  | BatResult.Ok () -> print_success settings
+  | BatResult.Bad (Exceptions.RcParseError s) ->
+    print_error "Exceptions.RcParseError" s
+  | BatResult.Bad e -> print_error_exn e 
+  
 let arg_handler print_template show_rc_options = 
   if print_template then (
     Rc2.get_template () |> print_endline;
@@ -24,14 +45,17 @@ let arg_handler print_template show_rc_options =
     let path = match config_path with
       | Some path -> Ok path
       | None -> Rc2.find () in
-    (path, settings)
-    >>= Rc2.read_from_file 
-    >>= fun ~settings () ->
-    append_title
-    |> Option.map (update_rc_append_title ~settings) 
-    |> Option.default settings
-    |> update_rc_debug debug
-    |> Getmed.getmed
+    begin
+      (path, settings)
+      >>= Rc2.read_from_file 
+      >>= fun ~settings () ->
+      append_title
+      |> Option.map (update_rc_append_title ~settings) 
+      |> Option.default settings
+      |> update_rc_debug debug
+      |> Getmed.getmed
+    end
+    |> handle_errors_last
 
 open Cmdliner
 

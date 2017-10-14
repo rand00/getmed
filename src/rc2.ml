@@ -157,12 +157,13 @@ let foo = {
 *)
 
 
-let find () = 
+let find () =
   try BatResult.Ok (
     List.find Sys.file_exists  
       [ (*(Sys.getcwd ()) /: ".getmedrc";*)
         (Sys.getenv "HOME") /: ".getmedrc" ] )
-  with Not_found -> BatResult.Bad RcNotFound
+  with Not_found ->
+    BatResult.Bad RcNotFound
   (*< note: this exn matches both 'find' and 'getenv'*)
 
 type file_path = string
@@ -205,9 +206,11 @@ let validate_settings s =
 
 (*goto continue writing interface*)
 let read_from_file ~settings file =
-  (*> goto catch exceptions from this*)
-  Yojson.Safe.from_file file
-  |> config_of_yojson (*< test this for when we have extra fields *)
+  let open Rresult in
+  (try Ok (Yojson.Safe.from_file ~fname:"rc-file" file)
+   with Yojson.Json_error s -> Error s)
+  >>= config_of_yojson
+  (*< test this for when we have extra fields *)
   |> function
   | Result.Ok settings' -> (
       Msg.term `Notif "update RC" [
@@ -217,7 +220,8 @@ let read_from_file ~settings file =
       | BatResult.Ok () as r -> r, settings'
       | BatResult.Bad _ as r -> r, settings
     )
-  | Result.Error e -> BatResult.Bad (RcParseError e), settings
+  | Result.Error e ->
+    BatResult.Bad (RcParseError e), settings
 
     (* failwith "todo" *)
 (*

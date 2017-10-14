@@ -96,17 +96,8 @@ let handle_devices ~(settings:Rc2.config) () =
   in
   loop settings.devices ()
 
-let print_success ~settings () = Ok (
-    let msg = match List.exists (fun d -> d.active) settings.devices with
-      | false -> "No active devices."
-      | true  -> "Ran succesfully for active devices."
-    in
-    Msg.term `Major "main" [ msg ]
-  ), settings  
-
 let getmed (settings:Rc2.config) =
-  S.read handle_devices ~settings ()
-  >>= print_success
+  S.read handle_devices ~settings () 
 
 
 
