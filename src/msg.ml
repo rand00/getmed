@@ -25,47 +25,6 @@ let c1 (*anglebrackets*) = c 1
 let c2 (*special text*) = c 2 
 let c3 (*numbers*) = c 3 
 
-let termwrap 
-    ?(initial_nonwrap=0) 
-    (*options for textwrap >>*)
-    ?(initial_indent="  ") 
-    ?(subsequent_indent="  ") 
-    ?(drop_whitespace=true)
-    ?(replace_whitespace=true)
-    ?override_maxwidth
-    ss = 
-  String.concat "" ss
-  |> (fun str -> 
-      let wrap_len = match override_maxwidth with
-        | Some l -> l
-        | None -> Unix.term_ncolumns () in
-      let (init_line, rest_str) = 
-        (match initial_nonwrap with
-         | 0 -> [], str
-         | n -> 
-           let str_len = String.length str in
-           let init_maxlen = (min (wrap_len - n) str_len) in
-           let init_len = 
-             (if str_len > init_maxlen then
-                String.rfind_from str (init_maxlen -1) " " 
-              else 
-                str_len )
-           in ( [ String.sub str 0 init_len ], String.lchop ~n:init_len str ))
-      in
-      let open Wrapper in
-      String.concat "\n"
-        (List.flatten
-           [ init_line;
-             rest_str |> wrap 
-               (make 
-                  ~initial_indent 
-                  ~subsequent_indent
-                  ~drop_whitespace
-                  ~replace_whitespace
-                  wrap_len)
-           ]))
-
-
 let term typ place_of_call ss =
   let open LTerm_text in
   let c_red = LTerm_style.rgb 143 0 0 in
