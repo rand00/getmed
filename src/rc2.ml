@@ -27,19 +27,19 @@ open Exceptions
 module T = struct 
 
   type device_match = [ `Uuid of string | `Label of string ]
-  [@@ deriving yojson { strict = false }]
+  [@@ deriving yojson]
 
   type search_subdir = [ `Recurse of string | `Only of string ]
-  [@@ deriving yojson { strict = false }]
+  [@@ deriving yojson]
   
   type types_to_transfer = [ `Img | `Vid | `All | `None ]
-  [@@ deriving yojson { strict = false }]
+  [@@ deriving yojson]
 
   type folders_prepend = [ `Date | `String of string | `Nothing ]
-  [@@ deriving yojson { strict = false }]
+  [@@ deriving yojson]
 
   type cleanup = [ `Remove_originals | `Format | `None ]
-  [@@ deriving yojson { strict = false }]
+  [@@ deriving yojson]
   
   type device_config = {
     name : string;
@@ -81,11 +81,20 @@ module T = struct
 
   } [@@ deriving yojson { strict = false }]
 
+  type colors = [
+      `Symbol of int
+    | `TextSpecial of int
+    | `TextWarning of int
+    | `TextError of int
+    | `Number of int
+  ] [@@ deriving yojson]
+
   (*goto report github issue that deriving signals 'config' as missing
     where it's 'boolean'
   *)
   type config = {
     debug : (bool [@default false]);
+    colors : colors list;
     devices : device_config list;
   } [@@ deriving yojson { strict = false }]
 
@@ -124,6 +133,7 @@ let template_rc = {
 
 let std : T.config = {
   debug = false;
+  colors = [];
   devices = [];
 }
 
@@ -204,6 +214,33 @@ let validate_settings s =
   else
     !res_ref
 
+module Default = struct
+
+  let with_colors colors =
+    let defaults = [
+      `Symbol 1;
+      `Number 3;
+      `TextSpecial 2;
+      `TextError 4;
+      `TextWarning 5
+    ] in
+    let is_same_tag x y = match x, y with 
+      | `Symbol _, `Symbol _ -> true
+      | `Number _, `Number _ -> true
+      | `TextSpecial _, `TextSpecial _ -> true
+      | `TextError _, `TextError _ -> true
+      | `TextWarning _, `TextWarning _ -> true
+      | _ -> false
+    in
+    let settings_with_default cdefault =
+      List.find_opt (is_same_tag cdefault) colors
+      |> function 
+      | Some c -> c
+      | None -> cdefault in
+    List.map settings_with_default defaults 
+  
+end
+
 (*goto continue writing interface*)
 let read_from_file ~settings file =
   let open Rresult in
@@ -217,7 +254,11 @@ let read_from_file ~settings file =
         "Sucesfully parsed config-file."
       ];
       match validate_settings settings' with
-      | BatResult.Ok () as r -> r, settings'
+      | BatResult.Ok () as r ->
+        let s =
+          { settings' with
+            colors = settings'.colors |> Default.with_colors }
+        in r, s
       | BatResult.Bad _ as r -> r, settings
     )
   | Result.Error e ->
