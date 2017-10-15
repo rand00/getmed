@@ -27,19 +27,19 @@ open Exceptions
 module T = struct 
 
   type device_match = [ `Uuid of string | `Label of string ]
-  [@@ deriving yojson]
+  [@@ deriving yojson { strict = false }]
 
   type search_subdir = [ `Recurse of string | `Only of string ]
-  [@@ deriving yojson]                       
-
+  [@@ deriving yojson { strict = false }]
+  
   type types_to_transfer = [ `Img | `Vid | `All | `None ]
-  [@@ deriving yojson]
+  [@@ deriving yojson { strict = false }]
 
   type folders_prepend = [ `Date | `String of string | `Nothing ]
-  [@@ deriving yojson]
+  [@@ deriving yojson { strict = false }]
 
   type cleanup = [ `Remove_originals | `Format | `None ]
-  [@@ deriving yojson]
+  [@@ deriving yojson { strict = false }]
   
   type device_config = {
     name : string;
@@ -79,7 +79,7 @@ module T = struct
     cleanup : cleanup;
     unmount : bool;
 
-  } [@@ deriving yojson]
+  } [@@ deriving yojson { strict = false }]
 
   (*goto report github issue that deriving signals 'config' as missing
     where it's 'boolean'
@@ -87,7 +87,7 @@ module T = struct
   type config = {
     debug : bool;
     devices : device_config list;
-  } [@@ deriving yojson]
+  } [@@ deriving yojson { strict = false }]
 
 end
 include T
