@@ -323,25 +323,7 @@ let transfer ~settings (media:media_file list) () =
   let start_time = Unix.gettimeofday () in
   let result_copy = 
     List.fold_left_result (fun prev_transf file ->
-        begin
-          let c i = LTerm_style.index i in
-          (*>goto supply as theme - set in config*)
-          let c1 (*anglebrackets*) = c 1 in
-          let c2 (*special text*) = c 2 in
-          let c3 (*numbers*) = c 3 in
-          let filename_markup = LTerm_text.([
-              S "Copying '";
-              B_fg c2; S file.path; E_fg;
-              S "'"
-            ]) in
-          let open Lwt in
-          Lazy.force LTerm.stdout >>= fun stdout ->
-          LTerm.clear_line_next stdout >>= fun () ->
-          LTerm.fprintls stdout @@ LTerm_text.eval filename_markup >>= fun () ->
-          LTerm.flush stdout
-        end
-        |> Lwt_main.run;
-
+        Msg.term_file_copy ~settings file;
         let progress =
           Msg.progress
             ~start_time

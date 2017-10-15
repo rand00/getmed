@@ -18,6 +18,7 @@
 
 open Batteries
 open BatExt
+open Media_types
 
 (*goto put into rc as theme*)
 let c i = LTerm_style.index i 
@@ -45,6 +46,27 @@ let term typ place_of_call ss =
     ])
   in
   LTerm.printls @@ LTerm_text.eval msg_markup
+  |> Lwt_main.run
+
+(*goo*)
+let term_file_copy ~settings file =
+  begin
+    let c i = LTerm_style.index i in
+    (*>goto supply as theme - set in config*)
+    let c1 (*anglebrackets*) = c 1 in
+    let c2 (*special text*) = c 2 in
+    let c3 (*numbers*) = c 3 in
+    let file_markup = LTerm_text.([
+        S "Copying '";
+        B_fg c2; S file.path; E_fg;
+        S "'"
+      ]) |> LTerm_text.eval in
+    let open Lwt in
+    Lazy.force LTerm.stdout >>= fun stdout ->
+    LTerm.clear_line_next stdout >>= fun () ->
+    LTerm.fprintls stdout @@ file_markup >>= fun () ->
+    LTerm.flush stdout
+  end
   |> Lwt_main.run
 
 let human_readable_bytes' bytes =
