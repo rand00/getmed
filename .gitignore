@@ -13,3 +13,5 @@
 /tests_
 /tests_rc
 /sync_lib_batext.sh
+/old_src
+/ocamldoc.*
