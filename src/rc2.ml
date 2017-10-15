@@ -85,7 +85,7 @@ module T = struct
     where it's 'boolean'
   *)
   type config = {
-    debug : bool;
+    debug : (bool [@default false]);
     devices : device_config list;
   } [@@ deriving yojson { strict = false }]
 
