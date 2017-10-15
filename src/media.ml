@@ -32,11 +32,17 @@ open Exceptions
 *)
 (*goto fix media types - take list of destinations from new settings*)
 
+let folder_prefix settings =
+  match settings.folders_prepend with
+    | `Date -> Folder.Name.today ()
+    | `String s -> s
+    | `Nothing -> ""
+
 let concat_titles ~settings typ = 
   let s = settings in
   let c root = String.concat "" 
     (List.flatten
-       [ [ root; "/"; Rc2.folder_prefix s; ];
+       [ [ root; "/"; folder_prefix s; ];
          ( match s.folders_append with
            | "" -> [ "" ] 
            | _  -> [ "_"; s.folders_append ]);
@@ -316,14 +322,14 @@ let map_result f v = BatResult.Monad.(
 
 let (>|=) v f = map_result f v 
 
-let transfer ~settings (media:media_file list) () =
+let transfer ~settings ~colors (media:media_file list) () =
   let open BatResult.Infix in
   let full_transfer_size = 
     List.fold_left (fun acc file -> acc + file.size) 0 media in
   let start_time = Unix.gettimeofday () in
   let result_copy = 
     List.fold_left_result (fun prev_transf file ->
-        Msg.term_file_copy ~settings file;
+        Msg.term_file_copy colors file;
         let progress =
           Msg.progress
             ~start_time

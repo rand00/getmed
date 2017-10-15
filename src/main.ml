@@ -47,7 +47,7 @@ let arg_handler print_template show_rc_options =
       | None -> Rc2.find () in
     begin
       (path, settings)
-      >>= Rc2.read_from_file 
+      >>= Rc2_handlers.read_from_file 
       >>= fun ~settings () ->
       append_title
       |> Option.map (update_rc_append_title ~settings) 

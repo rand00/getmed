@@ -48,17 +48,13 @@ let term typ place_of_call ss =
   LTerm.printls @@ LTerm_text.eval msg_markup
   |> Lwt_main.run
 
-(*goo*)
-let term_file_copy ~settings file =
+let term_file_copy colors file =
   begin
-    let c i = LTerm_style.index i in
-    (*>goto supply as theme - set in config*)
-    let c1 (*anglebrackets*) = c 1 in
-    let c2 (*special text*) = c 2 in
-    let c3 (*numbers*) = c 3 in
     let file_markup = LTerm_text.([
         S "Copying '";
-        B_fg c2; S file.path; E_fg;
+        B_fg (Rc2.color_to_lterm (`TextSpecial 0) colors);
+        S file.path;
+        E_fg;
         S "'"
       ]) |> LTerm_text.eval in
     let open Lwt in

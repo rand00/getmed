@@ -86,6 +86,7 @@ let handle_devices ~(settings:Rc2.config) () =
         StateResult.return () ~settings
         >> S.read @@ Media.dirs_fix
         >> S.read @@ Media.transfer media
+          ~colors:getmed_settings.colors 
         >> S.read @@ Media.cleanup media
         >> S.read @@ Dev.unmount
       end

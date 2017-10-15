@@ -101,12 +101,6 @@ module T = struct
 end
 include T
 
-let folder_prefix settings =
-  match settings.folders_prepend with
-    | `Date -> Folder.Name.today ()
-    | `String s -> s
-    | `Nothing -> ""
-
 let template_rc = {
   name = "camera-name";
   active = true;
@@ -178,44 +172,17 @@ let find () =
 
 type file_path = string
 
-let validate_field res_ref test error_msg =
-  test || (
-    Msg.term `Error "validate RC" [
-      "Field 'name' should be a non-empty string."
-    ];
-    res_ref := BatResult.Bad RcValidationError;
-    false
-  )
-
-let validate_settings s =
-  let res_ref = ref @@ Ok () in
-  let validate_device d =
-    not d.active ||
-    validate_field res_ref
-      (d.name <> "") 
-      [ "Field 'name' should be a non-empty string." ]
-    &&
-    validate_field res_ref
-      (List.for_all 
-         (function
-           | `Uuid "" | `Label "" -> false
-           | _ -> true
-         )
-         d.device_match
-      ) 
-      [ "Field 'device_match' should contain a non-empty string." ]
-    &&
-    validate_field res_ref
-      (d.mount_path <> "") 
-      [ "Field 'mount_path' should be a non-empty string." ]
-  in
-  if List.for_all validate_device s.devices then
-    Ok ()
-  else
-    !res_ref
-
 module Default = struct
 
+  let is_same_color_tag x y = match x, y with 
+    | `Symbol _, `Symbol _ -> true
+    | `Number _, `Number _ -> true
+    | `TextSpecial _, `TextSpecial _ -> true
+    | `TextError _, `TextError _ -> true
+    | `TextWarning _, `TextWarning _ -> true
+    | _ -> false
+
+  
   let with_colors colors =
     let defaults = [
       `Symbol 1;
@@ -224,16 +191,8 @@ module Default = struct
       `TextError 4;
       `TextWarning 5
     ] in
-    let is_same_tag x y = match x, y with 
-      | `Symbol _, `Symbol _ -> true
-      | `Number _, `Number _ -> true
-      | `TextSpecial _, `TextSpecial _ -> true
-      | `TextError _, `TextError _ -> true
-      | `TextWarning _, `TextWarning _ -> true
-      | _ -> false
-    in
     let settings_with_default cdefault =
-      List.find_opt (is_same_tag cdefault) colors
+      List.find_opt (is_same_color_tag cdefault) colors
       |> function 
       | Some c -> c
       | None -> cdefault in
@@ -241,55 +200,21 @@ module Default = struct
   
 end
 
-(*goto continue writing interface*)
-let read_from_file ~settings file =
-  let open Rresult in
-  (try Ok (Yojson.Safe.from_file ~fname:"rc-file" file)
-   with Yojson.Json_error s -> Error s)
-  >>= config_of_yojson
-  (*< test this for when we have extra fields *)
+(*note: the settings-list will be complete*)
+let color_to_lterm color_tag colors =
+  List.find (Default.is_same_color_tag color_tag) colors
   |> function
-  | Result.Ok settings' -> (
-      Msg.term `Notif "update RC" [
-        "Sucesfully parsed config-file."
-      ];
-      match validate_settings settings' with
-      | BatResult.Ok () as r ->
-        let s =
-          { settings' with
-            colors = settings'.colors |> Default.with_colors }
-        in r, s
-      | BatResult.Bad _ as r -> r, settings
-    )
-  | Result.Error e ->
-    BatResult.Bad (RcParseError e), settings
+  | `Symbol i 
+  | `TextSpecial i
+  | `TextWarning i
+  | `TextError i
+  | `Number i -> LTerm_style.index i
 
-    (* failwith "todo" *)
-(*
-let update_one_dev arg dev =
-  match arg with
-  | `Append_title s -> { dev with folders_append = s }
-  | _ -> dev 
-
-let update_config arg config =
-  match arg with
-  | `Debug 
-
-let update_one_arg rc arg = List.map (update_one_dev arg) rc
-
-let update_cli_aux rc args = List.fold_left update_one_arg rc args
-
-let update_cli ~args ~settings () =
-  BatResult.Ok (),
-  { settings with
-    devices = update_cli_aux settings.devices args }
-*)
-(*goo update_cli with lift*) 
-
-let rc_option_string field_name list_of_type ~to_string =
+let rc_option_string field_name ?descr ~to_string list_of_type =
   String.concat "" [
     field_name; " can be any of:\n  ";
     (String.concat " or " (List.map to_string list_of_type));
+    match descr with Some d -> "\n  where "^d | None -> ""
   ]
 
 (*goto make separate cli-arg for this*)
@@ -313,6 +238,17 @@ let get_rc_options () =
     rc_option_string "cleanup" 
       [ `Remove_originals; `Format; `None ]
       ~to_string:(aux cleanup_to_yojson);
+    rc_option_string "colors"
+      ~descr:"the integer argument references terminal colors."
+      [
+        `Symbol 0;
+        `Number 1;
+        `TextSpecial 2;
+        `TextError 3;
+        `TextWarning 4
+      ]
+      ~to_string:(aux colors_to_yojson);
+
   ]
 
 let to_string config =
