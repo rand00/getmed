@@ -192,7 +192,7 @@ module Default = struct
       `TextWarning 5
     ] in
     let settings_with_default cdefault =
-      List.find_opt (is_same_color_tag cdefault) colors
+      CCList.find_pred (is_same_color_tag cdefault) colors
       |> function 
       | Some c -> c
       | None -> cdefault in
