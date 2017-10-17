@@ -81,20 +81,22 @@ module T = struct
 
   } [@@ deriving yojson { strict = false }]
 
-  type colors = [
-      `Symbol of int
-    | `TextSpecial of int
-    | `TextWarning of int
-    | `TextError of int
-    | `Number of int
+  type color_tag = [
+      `Symbol 
+    | `TextSpecial 
+    | `TextWarning 
+    | `TextError 
+    | `Number 
   ] [@@ deriving yojson]
 
+  type color = (color_tag * int) [@@ deriving yojson]
+  
   (*goto report github issue that deriving signals 'config' as missing
     where it's 'boolean'
   *)
   type config = {
     debug : (bool [@default false]);
-    colors : colors list;
+    colors : color list;
     devices : device_config list;
   } [@@ deriving yojson { strict = false }]
 
@@ -175,27 +177,27 @@ type file_path = string
 module Default = struct
 
   let is_same_color_tag x y = match x, y with 
-    | `Symbol _, `Symbol _ -> true
-    | `Number _, `Number _ -> true
-    | `TextSpecial _, `TextSpecial _ -> true
-    | `TextError _, `TextError _ -> true
-    | `TextWarning _, `TextWarning _ -> true
+    | `Symbol, (`Symbol, _) -> true
+    | `Number, (`Number, _) -> true
+    | `TextSpecial, (`TextSpecial, _) -> true
+    | `TextError, (`TextError, _) -> true
+    | `TextWarning, (`TextWarning, _) -> true
     | _ -> false
 
   
   let with_colors colors =
     let defaults = [
-      `Symbol 1;
-      `Number 3;
-      `TextSpecial 2;
-      `TextError 4;
-      `TextWarning 5
+      `Symbol, 1;
+      `Number, 3;
+      `TextSpecial, 2;
+      `TextError, 4;
+      `TextWarning, 5
     ] in
-    let settings_with_default cdefault =
+    let settings_with_default (cdefault, idefault) =
       CCList.find_pred (is_same_color_tag cdefault) colors
       |> function 
       | Some c -> c
-      | None -> cdefault in
+      | None -> cdefault, idefault in
     List.map settings_with_default defaults 
   
 end
@@ -204,11 +206,11 @@ end
 let color_to_lterm color_tag colors =
   List.find (Default.is_same_color_tag color_tag) colors
   |> function
-  | `Symbol i 
-  | `TextSpecial i
-  | `TextWarning i
-  | `TextError i
-  | `Number i -> LTerm_style.index i
+  | `Symbol, i 
+  | `TextSpecial, i
+  | `TextWarning, i
+  | `TextError, i
+  | `Number, i -> LTerm_style.index i
 
 let rc_option_string field_name ?descr ~to_string list_of_type =
   String.concat "" [
@@ -241,13 +243,13 @@ let get_rc_options () =
     rc_option_string "colors"
       ~descr:"the integer argument references terminal colors."
       [
-        `Symbol 0;
-        `Number 1;
-        `TextSpecial 2;
-        `TextError 3;
-        `TextWarning 4
+        `Symbol, 0;
+        `Number, 1;
+        `TextSpecial, 2;
+        `TextError, 3;
+        `TextWarning, 4
       ]
-      ~to_string:(aux colors_to_yojson);
+      ~to_string:(aux color_to_yojson);
 
   ]
 

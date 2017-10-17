@@ -52,7 +52,7 @@ let term_file_copy colors file =
   begin
     let file_markup = LTerm_text.([
         S "Copying '";
-        B_fg (Rc2.color_to_lterm (`TextSpecial 0) colors);
+        B_fg (Rc2.color_to_lterm `TextSpecial colors);
         S file.path;
         E_fg;
         S "'"
