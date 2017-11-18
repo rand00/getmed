@@ -6,7 +6,7 @@ let update_rc_append_title title ~settings =
     ) settings.devices
   in { settings with devices }  
 
-let update_rc_debug debug settings = { settings with debug }
+let update_rc_debug debug (settings:config) = { settings with debug }
 
 let print_success settings = 
   let msg = match List.exists (fun d -> d.active) settings.devices with
@@ -16,11 +16,13 @@ let print_success settings =
   Msg.term `Major "main" [ msg ]
 
 let print_error exn_name s =
-  Msg.term `Error "main" [ exn_name;":\n\n"; s ];
+  Msg.term `Error "main" ~colors:Rc2.Default.colors
+    [ exn_name;":\n\n"; s ];
   exit 1
     
 let print_error_exn exn =
-  Msg.term `Error "main" [ Printexc.to_string exn ];
+  Msg.term `Error "main" ~colors:Rc2.Default.colors
+    [ Printexc.to_string exn ];
   exit 1
 
 let handle_errors_last (r, settings) = match r with

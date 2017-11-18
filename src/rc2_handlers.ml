@@ -7,9 +7,8 @@ open Rc2
 
 let validate_field res_ref test error_msg =
   test || (
-    Msg.term `Error "validate RC" [
-      "Field 'name' should be a non-empty string."
-    ];
+    Msg.term `Error "validate RC" ~colors:Rc2.Default.colors
+      [ "Field 'name' should be a non-empty string." ];
     res_ref := BatResult.Bad RcValidationError;
     false
   )
@@ -50,9 +49,8 @@ let read_from_file ~settings file =
   (*< test this for when we have extra fields *)
   |> function
   | Result.Ok settings' -> (
-      Msg.term `Notif "update RC" [
-        "Sucesfully parsed config-file."
-      ];
+      Msg.term `Notif "update RC" ~colors:Rc2.Default.colors
+        [ "Sucesfully parsed config-file." ];
       match validate_settings settings' with
       | BatResult.Ok () as r ->
         let s =

@@ -196,22 +196,22 @@ module Default = struct
     | `TextWarning, (`TextWarning, _) -> true
     | _ -> false
 
-  
+  let colors = [
+    `Symbol, 1;
+    `Number, 3;
+    `TextSpecial, 2;
+    `TextError, 4;
+    `TextWarning, 5
+  ]
+
   let with_colors colors =
-    let defaults = [
-      `Symbol, 1;
-      `Number, 3;
-      `TextSpecial, 2;
-      `TextError, 4;
-      `TextWarning, 5
-    ] in
     let settings_with_default (cdefault, idefault) =
       CCList.find_pred (is_same_color_tag cdefault) colors
       |> function 
       | Some c -> c
       | None -> cdefault, idefault in
-    List.map settings_with_default defaults 
-  
+    List.map settings_with_default colors
+
 end
 
 (*note: the settings-list will be complete*)
