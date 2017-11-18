@@ -137,24 +137,25 @@ let find_aux parse_dev is_dev =
   |> BatList.of_enum 
   |> CCList.find_map is_dev 
 
-let find ~settings:(s,colors) () =
+let find ~settings () =
+  let s = settings in
   let open Rresult in
   let open Rc2 in
   find_aux Parse.device (function
-      | Ok dev when is_device s.device_match dev -> Some dev
+      | Ok dev when is_device s.device.device_match dev -> Some dev
       | Ok _ -> None
       | Error _ ->
-        Msg.term ~colors `Notif "parse device"
+        Msg.term ~colors:s.colors `Notif "parse device"
           [ "Failed to parse some device." ];
         None 
     )
   |> function
-  | Some dev -> BatResult.Ok dev, (s, colors)
+  | Some dev -> BatResult.Ok dev, s
   | None ->
-    ( Msg.term ~colors `Notif "find device"
-        [ "The device '"; s.name; "' is not connected, ";
+    ( Msg.term ~colors:s.colors `Notif "find device"
+        [ "The device '"; s.device.name; "' is not connected, ";
           "or you have not run getmed with enough rights." ];
-      (BatResult.Bad DeviceNotPresent), (s, colors)
+      (BatResult.Bad DeviceNotPresent), s
     )
 
 let get_dir_if_mounted dev dir ~colors =
@@ -228,36 +229,38 @@ let mount dev ~colors action =
          Bad MountError ))
 
 let mount_smartly ~settings (dev:device) =
-  let dev_settings, colors = settings in
-  mountpoint_fix_or_find dev dev_settings.mount_path ~colors
-  >>= mount dev ~colors
+  let s = settings in
+  mountpoint_fix_or_find dev s.device.mount_path ~colors:s.colors
+  >>= mount dev ~colors:s.colors
   |> function
-  | Ok mount_path -> ((Ok ()), ({ dev_settings with mount_path }, colors))
-  | (Bad _) as bad -> (bad, settings)
+  | Ok mount_path ->
+    ((Ok ()), ({ s with device = { s.device with mount_path }}))
+  | (Bad _) as bad ->
+    (bad, s)
 
 let unmount ~settings () = 
-  let s, colors = settings in
+  let s, colors = settings, settings.colors in
   let msg = Msg.term ~colors in
-  match s.unmount with
+  match s.device.unmount with
   | false -> 
     ( msg `Notif "unmount" [
           "Not going to unmount device '";
-          s.name; "'.";
+          s.device.name; "'.";
         ];
       Ok () )
   | true  -> 
-    (Sys.command ("umount " ^ (s.mount_path |> Folder.escape))
+    (Sys.command ("umount " ^ (s.device.mount_path |> Folder.escape))
      |> function 
      | 0 -> 
        ( msg `Notif "unmount" [
              "Unmount succesful for device '";
-             s.name; "'.";
+             s.device.name; "'.";
            ]; 
          Ok () )
      | errcode -> 
        ( msg `Error "unmount" [
              "Error occured during unmounting device '";
-             s.name; "'.";
+             s.device.name; "'.";
              "Error-code was '";
              String.of_int errcode; "'."
            ];

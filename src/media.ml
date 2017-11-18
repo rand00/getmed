@@ -33,34 +33,34 @@ open Exceptions
 (*goto fix media types - take list of destinations from new settings*)
 
 let folder_prefix settings =
-  match settings.folders_prepend with
+  match settings.device.folders_prepend with
     | `Date -> Folder.Name.today ()
     | `String s -> s
     | `Nothing -> ""
 
-let concat_titles ~settings:(dev_settings, _) typ = 
-  let s = dev_settings in
+let concat_titles ~settings typ = 
+  let s = settings in
   let c root = String.concat "" 
     (List.flatten
        [ [ root; "/"; folder_prefix s; ];
-         ( match s.folders_append with
+         ( match s.device.folders_append with
            | "" -> [ "" ] 
-           | _  -> [ "_"; s.folders_append ]);
-         ( match s.folders_append_cam_name with
+           | _  -> [ "_"; s.device.folders_append ]);
+         ( match s.device.folders_append_cam_name with
            | false -> [ "" ] 
-           | true  -> [ "."; s.name ])
+           | true  -> [ "."; s.device.name ])
        ]
     )
   in match typ with 
-  | `Img -> List.map c s.image_destinations
-  | `Img_meta -> List.map c s.image_destinations              
-  | `Vid -> List.map c s.video_destinations
-  | `Vid_meta -> List.map c s.video_destinations
+  | `Img -> List.map c s.device.image_destinations
+  | `Img_meta -> List.map c s.device.image_destinations              
+  | `Vid -> List.map c s.device.video_destinations
+  | `Vid_meta -> List.map c s.device.video_destinations
   | _ -> failwith "pass an `Img or `Vid type"
 
 
 let dirs_fix ~settings () =
-  let dev_settings, colors = settings in 
+  let s, colors = settings, settings.colors in 
   let create_dir _ folder =
     let created = Folder.create_if_nonexistent ~colors folder in
     let _ = try Unix.set_user_as_owner folder with _ ->
@@ -72,7 +72,7 @@ let dirs_fix ~settings () =
   in
   let create_dirs dirs = List.fold_left_result create_dir true dirs
   in
-  match dev_settings.types_to_transfer with 
+  match s.device.types_to_transfer with 
   | `Img -> create_dirs @@ concat_titles `Img ~settings
   | `Vid -> create_dirs @@ concat_titles `Vid ~settings
   | `All -> 
@@ -218,12 +218,12 @@ let which_media_types extract_type media =
   in aux `None media
 
 let search_aux search_subdir ~settings = 
-  let (s, colors) = settings in
+  let (s, colors) = settings, settings.colors in
   let msg = Msg.term ~colors in
   let subdir, recurse = match search_subdir with
     | `Recurse s -> s, true
     | `Only s -> s, false in
-  let dir = ( s.mount_path /: subdir ) in (
+  let dir = ( s.device.mount_path /: subdir ) in (
     match File.is_dir dir with 
     | true ->
       StateResult.Infix.(
@@ -231,7 +231,7 @@ let search_aux search_subdir ~settings =
              traverse_tree
                ~recurse
                ~extensions:(
-                 filter_extensions_by_rc s
+                 filter_extensions_by_rc s.device
                  |> fixup_extensions
                )
            ) dir), settings)
@@ -261,7 +261,7 @@ module S = StateResult.Settings
 open StateResult.Infix
 
 let search ~settings () =
-  let s, colors = settings in 
+  let s = settings in 
   let join_files_and_types acc subdir =
     acc
     >>= fun ~settings (acc_files, acc_types) -> 
@@ -272,16 +272,16 @@ let search ~settings () =
   let init = (Ok ([], []), settings) in
   List.fold_left join_files_and_types
     init
-    s.search_subdirs
+    s.device.search_subdirs
   >>= fun ~settings (files, types_to_transfer_list) ->
   let types_to_transfer = 
     types_to_transfer_list
     |> which_media_types (fun t -> t)
-  in (Ok files, ({ s with types_to_transfer }, colors))
+  in (Ok files, ({ s with device = { s.device with types_to_transfer }}))
 
 
 let copy_file ~settings ~progress file =
-  let dev_settings, colors = settings in
+  let s, colors = settings, settings.colors in
   let msg = Msg.term ~colors in
   let open BatResult.Monad in
   let error str =
@@ -328,7 +328,7 @@ let map_result f v = BatResult.Monad.(
 let (>|=) v f = map_result f v 
 
 let transfer ~settings media () =
-  let dev_settings, colors = settings in 
+  let s, colors = settings, settings.colors in 
   let open BatResult.Infix in
   let full_transfer_size = 
     List.fold_left (fun acc file -> acc + file.size) 0 media in
@@ -378,17 +378,17 @@ let remove files ~recursive ~colors =
         Bad RemoveFailure )
 
 let cleanup media ~settings () =
-  let dev_settings, colors = settings in 
-  match dev_settings.cleanup with
+  let s, colors = settings, settings.colors in 
+  match s.device.cleanup with
   | `None -> Ok ()
   | `Remove_originals ->
     let media_files = List.map (fun {path} -> Folder.escape path) media
     in remove media_files ~recursive:false ~colors
   | `Format -> (*goto better to really format for flash health? *)
     let files_at_mount =
-      Sys.readdir dev_settings.mount_path
+      Sys.readdir s.device.mount_path
       |> Array.to_list
-      |> List.map (fun fn -> dev_settings.mount_path /: fn)
+      |> List.map (fun fn -> s.device.mount_path /: fn)
     in
     if not @@ List.for_all Sys.file_exists files_at_mount then 
       ( Msg.term ~colors `Error "cleanup"

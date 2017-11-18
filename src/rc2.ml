@@ -100,8 +100,20 @@ module T = struct
     devices : device_config list;
   } [@@ deriving yojson { strict = false }]
 
+  type device_wrap = {
+    device : device_config;
+    colors : color list;
+    debug : bool;
+  }
+  
 end
 include T
+
+let device_wrap (config:config) device_config = {
+  device = device_config;
+  colors = config.colors;
+  debug = config.debug;
+}
 
 let template_rc = {
   name = "camera-name";
@@ -268,28 +280,16 @@ let get_template : unit -> string
   = fun () ->
     { std with devices = [template_rc] } |> to_string
   
-(*not used for now*)
-let print_if_debug ~settings pass_on = 
-  let () = match settings.debug with 
-    | false -> ()
-    | true -> 
-      let sep = (String.make 35 '>') in
-      let print_frame s = 
-        print_endline 
-          (String.concat "\n" [ sep; s; sep ]) in
-      print_frame (to_string settings) 
-  in ()
-
-let print_dev_config ~debug (pass_on, settings) =
-  let dev_settings, colors = settings in
-  let () = match debug with 
+let print_config_debug (pass_on, settings) =
+  let s = settings in
+  let () = match s.debug with 
     | false -> ()
     | true -> 
       let sep c = (String.make 45 c) in
       let print_frame s = 
         print_endline 
           (String.concat "\n" [ sep '>'; s; sep '<']) in
-      print_frame (device_config_to_string dev_settings)
+      print_frame (device_config_to_string s.device)
   in ()
 
 (*

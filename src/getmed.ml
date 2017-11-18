@@ -29,35 +29,35 @@ module S = StateResult.Settings
 let handle_errors ~colors r =
   let msg = Msg.term ~colors in 
   match r with 
-  | ((Ok _), dev) ->
+  | ((Ok _), s) ->
     begin
       msg `Major "handler" 
-        [ "Ran succesfully for device '"; dev.name;"'." ];
+        [ "Ran succesfully for device '"; s.device.name;"'." ];
       Ok ()
     end
-  | (Bad (BeforeMounting DeviceNotPresent), dev) ->
+  | (Bad (BeforeMounting DeviceNotPresent), s) ->
     begin
       msg `Notif "handler"
         [ "Trying next device instead." ];
       Ok ()
     end
-  | (Bad (BeforeMounting exn), dev) ->
+  | (Bad (BeforeMounting exn), s) ->
     begin
       msg `Error "handler" [
-        "Failed on device '"; dev.name; "' with the ";
+        "Failed on device '"; s.device.name; "' with the ";
         "error: \n\t";
         Printexc.to_string exn;
       ];
       exit 1
     end
-  | (Bad exn_after_mounting, dev) ->
+  | (Bad exn_after_mounting, s) ->
     begin
       msg `Error "handler" [
-        "Failed on device '"; dev.name; "' with the ";
+        "Failed on device '"; s.device.name; "' with the ";
         "error: \n\t";
         Printexc.to_string exn_after_mounting;
       ];
-      Dev.unmount ~settings:(dev, colors) () |> ignore;
+      Dev.unmount ~settings:s () |> ignore;
       exit 1
     end
 
@@ -77,12 +77,13 @@ let handle_devices ~(settings:Rc2.config) () =
         dev.name;
         "'."
       ];
+      let settings = Rc2.device_wrap gs dev in
       begin
-        Dev.find ~settings:(dev, gs.colors) () 
+        Dev.find ~settings () 
         >>= Dev.mount_smartly
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
         >>= Media.search 
-        >>? Rc2.print_dev_config ~debug:gs.debug
+        >>? Rc2.print_config_debug
 
         >>= fun ~settings media -> 
         StateResult.return () ~settings
@@ -91,7 +92,7 @@ let handle_devices ~(settings:Rc2.config) () =
         >> S.read @@ Media.cleanup media
         >> S.read @@ Dev.unmount
       end
-      |> handle_errors ~colors:gs.colors
+      |> handle_errors ~colors:settings.colors
       |> bind_result (loop tl)
     | _ :: tl -> loop tl ()
     | _ -> Ok ()
