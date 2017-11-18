@@ -20,22 +20,25 @@ open Batteries
 open BatExt
 open Media_types
 
+(*
 (*goto put into rc as theme*)
 let c i = LTerm_style.index i 
 let c1 (*anglebrackets*) = c 1 
 let c2 (*special text*) = c 2 
 let c3 (*numbers*) = c 3 
+*)
 
-let term typ place_of_call ss =
+let get_c = Rc2.color_to_lterm
+
+let term ~colors typ place_of_call ss =
   let open LTerm_text in
-  let c_red = LTerm_style.rgb 143 0 0 in
   let wrap_in_color color s_text =
     B_fg color :: s_text @ [E_fg] in
   let head_str = "getmed:" ^ place_of_call ^ ":" in
   let msg_markup = LTerm_text.(List.flatten [
       (match typ with
-       | `Error -> wrap_in_color c_red [ S head_str ]
-       | `Major -> wrap_in_color c2 [ S head_str ]
+       | `Error -> wrap_in_color (get_c `TextWarning colors) [ S head_str ]
+       | `Major -> wrap_in_color (get_c `TextSpecial colors) [ S head_str ]
        | `Notif -> [ S head_str ]
       );
       (match typ with 
@@ -48,11 +51,11 @@ let term typ place_of_call ss =
   LTerm.printls @@ LTerm_text.eval msg_markup
   |> Lwt_main.run
 
-let term_file_copy colors file =
+let term_file_copy ~colors file =
   begin
     let file_markup = LTerm_text.([
         S "Copying '";
-        B_fg (Rc2.color_to_lterm `TextSpecial colors);
+        B_fg (get_c `TextSpecial colors);
         S file.path;
         E_fg;
         S "'"
@@ -111,6 +114,7 @@ let human_readable_time ~pr_second p =
     s "%1.1f second(s)" (float p /. float second)
 
 let progress
+    ~colors
     ~start_time
     ~full_transfer_size
     ~prev_transf
@@ -120,6 +124,10 @@ let progress
   let f = Float.of_int 
   and s = Printf.sprintf
   in
+  let c_sym = (get_c `Symbol colors)
+  and c_num = (get_c `Number colors)
+  and c_tsp = (get_c `TextSpecial colors)
+  in 
   let transferred = prev_transf + fo_transf in
   let pct_transferred =
     f transferred *. 100. /. f full_transfer_size in
@@ -140,16 +148,18 @@ let progress
       |> Int.of_float in
     String.make len '|' in
   let markup_box s = LTerm_text.(List.flatten [
-      [ B_bold true; B_fg c1; S "["; E_fg; E_bold; ];
+      [ B_bold true; B_fg c_sym; S "["; E_fg; E_bold; ];
       s;
-      [ B_bold true; B_fg c1; S "]"; E_fg; E_bold; ]
+      [ B_bold true; B_fg c_sym; S "]"; E_fg; E_bold; ]
     ]) 
   and markup_num2 (n,u) (n', u') = LTerm_text.([
-    B_fg c3; S n; E_fg; B_fg c2; S u; S "/"; E_fg; 
-    B_fg c3; S n'; E_fg; B_fg c2; S u'; E_fg;
+      B_fg c_num; S n; E_fg;
+      B_fg c_tsp; S u; S "/"; E_fg; 
+      B_fg c_num; S n'; E_fg;
+      B_fg c_tsp; S u'; E_fg;
   ])
   and markup_num (n,u) = LTerm_text.([
-    B_fg c3; S n; E_fg; B_fg c2; S u; E_fg; 
+    B_fg c_num; S n; E_fg; B_fg c_tsp; S u; E_fg; 
   ]) in
   let progress_markup = LTerm_text.(List.flatten [
       markup_box [S (s "%-15s" progress_bar)];

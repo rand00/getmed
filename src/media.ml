@@ -38,8 +38,8 @@ let folder_prefix settings =
     | `String s -> s
     | `Nothing -> ""
 
-let concat_titles ~settings typ = 
-  let s = settings in
+let concat_titles ~settings:(dev_settings, _) typ = 
+  let s = dev_settings in
   let c root = String.concat "" 
     (List.flatten
        [ [ root; "/"; folder_prefix s; ];
@@ -60,10 +60,11 @@ let concat_titles ~settings typ =
 
 
 let dirs_fix ~settings () =
+  let dev_settings, colors = settings in 
   let create_dir _ folder =
-    let created = Folder.create_if_nonexistent folder in
+    let created = Folder.create_if_nonexistent ~colors folder in
     let _ = try Unix.set_user_as_owner folder with _ ->
-      Msg.term `Notif "setup media directories"
+      Msg.term ~colors `Notif "setup media directories"
         [ "Couldn't change owner of folder '";
           folder;
           "' to user." ]
@@ -71,14 +72,14 @@ let dirs_fix ~settings () =
   in
   let create_dirs dirs = List.fold_left_result create_dir true dirs
   in
-  match settings.types_to_transfer with 
+  match dev_settings.types_to_transfer with 
   | `Img -> create_dirs @@ concat_titles `Img ~settings
   | `Vid -> create_dirs @@ concat_titles `Vid ~settings
   | `All -> 
     ( create_dirs @@ concat_titles `Img ~settings >>= fun _ -> 
       create_dirs @@ concat_titles `Vid ~settings )
   | `None -> 
-    ( Msg.term `Notif "setup media directories"
+    ( Msg.term ~colors `Notif "setup media directories"
         [ "No media-files were present on the device." ];
       Bad MediaNotPresent )
 
@@ -216,8 +217,9 @@ let which_media_types extract_type media =
     | _ -> acc
   in aux `None media
 
-let search_aux search_subdir ~(settings:Rc2.device_config) = 
-  let s = settings in
+let search_aux search_subdir ~settings = 
+  let (s, colors) = settings in
+  let msg = Msg.term ~colors in
   let subdir, recurse = match search_subdir with
     | `Recurse s -> s, true
     | `Only s -> s, false in
@@ -229,7 +231,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
              traverse_tree
                ~recurse
                ~extensions:(
-                 filter_extensions_by_rc settings
+                 filter_extensions_by_rc s
                  |> fixup_extensions
                )
            ) dir), settings)
@@ -241,7 +243,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
             in 
             match media_list with 
             | [] -> 
-              ( Msg.term `Notif "media search"
+              ( msg `Notif "media search"
                   [ "No media files present in the specified ";
                     "device subfolder, '"; subdir;"'." ];
                 (Ok ([], `None), settings) )
@@ -249,7 +251,7 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
 
     (*goto should we really fail here? - maybe yes*)
     | false -> 
-      ( Msg.term `Error "media search"
+      ( msg `Error "media search"
           [ "The device directory '"; dir; "', does not ";
             "exist." ];
         ((Bad DeviceFolderNonExistent), settings) ))
@@ -258,7 +260,8 @@ let search_aux search_subdir ~(settings:Rc2.device_config) =
 module S = StateResult.Settings
 open StateResult.Infix
 
-let search ~(settings:Rc2.device_config) () =
+let search ~settings () =
+  let s, colors = settings in 
   let join_files_and_types acc subdir =
     acc
     >>= fun ~settings (acc_files, acc_types) -> 
@@ -269,19 +272,21 @@ let search ~(settings:Rc2.device_config) () =
   let init = (Ok ([], []), settings) in
   List.fold_left join_files_and_types
     init
-    settings.search_subdirs
+    s.search_subdirs
   >>= fun ~settings (files, types_to_transfer_list) ->
   let types_to_transfer = 
     types_to_transfer_list
     |> which_media_types (fun t -> t)
-  in (Ok files, { settings with types_to_transfer })
+  in (Ok files, ({ s with types_to_transfer }, colors))
 
 
 let copy_file ~settings ~progress file =
+  let dev_settings, colors = settings in
+  let msg = Msg.term ~colors in
   let open BatResult.Monad in
   let error str =
     print_endline "";
-    Msg.term `Error ("copy file:"^file.path) 
+    msg `Error ("copy file:"^file.path) 
         [ "An error '"; str;
           "' occured on copying file." ]
   in
@@ -293,7 +298,7 @@ let copy_file ~settings ~progress file =
          | false -> Ok destination_folder
          | true ->
            print_endline "";
-           Msg.term `Error "copy file" [
+           msg `Error "copy file" [
              "Error while trying to copy file '";
              file.path;
              "' - the file already exists at '";
@@ -322,7 +327,8 @@ let map_result f v = BatResult.Monad.(
 
 let (>|=) v f = map_result f v 
 
-let transfer ~settings ~colors (media:media_file list) () =
+let transfer ~settings media () =
+  let dev_settings, colors = settings in 
   let open BatResult.Infix in
   let full_transfer_size = 
     List.fold_left (fun acc file -> acc + file.size) 0 media in
@@ -332,6 +338,7 @@ let transfer ~settings ~colors (media:media_file list) () =
         Msg.term_file_copy colors file;
         let progress =
           Msg.progress
+            ~colors 
             ~start_time
             ~full_transfer_size
             ~prev_transf
@@ -345,7 +352,8 @@ let transfer ~settings ~colors (media:media_file list) () =
   result_copy >>= fun _ -> Ok media
 
 (*warning: now doesn't check for remove media setting*)
-let remove files ~recursive = 
+let remove files ~recursive ~colors =
+  let msg = Msg.term ~colors in
   match files with 
   | [] -> Ok ()
   | _  -> 
@@ -358,35 +366,36 @@ let remove files ~recursive =
     )
     |> function
     | 0 -> 
-      ( Msg.term `Notif "remove media"
+      ( msg `Notif "remove media"
           [ "Media was succesfully removed ";
             "from device." ];
         Ok () )
     | errcode -> 
-      ( Msg.term `Error "remove media"
+      ( msg `Error "remove media"
           [ "Errorcode from command 'rm' was '";
             String.of_int errcode;
             "'." ];
         Bad RemoveFailure )
 
 let cleanup media ~settings () =
-  match settings.cleanup with
+  let dev_settings, colors = settings in 
+  match dev_settings.cleanup with
   | `None -> Ok ()
   | `Remove_originals ->
     let media_files = List.map (fun {path} -> Folder.escape path) media
-    in remove media_files ~recursive:false
+    in remove media_files ~recursive:false ~colors
   | `Format -> (*goto better to really format for flash health? *)
     let files_at_mount =
-      Sys.readdir settings.mount_path
+      Sys.readdir dev_settings.mount_path
       |> Array.to_list
-      |> List.map (fun fn -> settings.mount_path /: fn)
+      |> List.map (fun fn -> dev_settings.mount_path /: fn)
     in
     if not @@ List.for_all Sys.file_exists files_at_mount then 
-      ( Msg.term `Error "cleanup"
+      ( Msg.term ~colors `Error "cleanup"
           [ "Some of the files we want to remove doesn't exist." ];
         Bad RemoveFailure )
     else 
-      remove files_at_mount ~recursive:true
+      remove files_at_mount ~recursive:true ~colors
   
 
 

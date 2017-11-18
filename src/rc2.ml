@@ -280,7 +280,8 @@ let print_if_debug ~settings pass_on =
       print_frame (to_string settings) 
   in ()
 
-let print_dev_config ~debug (pass_on, settings) = 
+let print_dev_config ~debug (pass_on, settings) =
+  let dev_settings, colors = settings in
   let () = match debug with 
     | false -> ()
     | true -> 
@@ -288,7 +289,7 @@ let print_dev_config ~debug (pass_on, settings) =
       let print_frame s = 
         print_endline 
           (String.concat "\n" [ sep '>'; s; sep '<']) in
-      print_frame (device_config_to_string settings)
+      print_frame (device_config_to_string dev_settings)
   in ()
 
 (*

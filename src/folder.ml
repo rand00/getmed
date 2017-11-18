@@ -26,16 +26,17 @@ let escape_spaces = Pcre.replace ~pat:" " ~templ:"\\ "
 (*goto move into File module *)
 let escape = Printf.sprintf "'%s'"
 
-let create_if_nonexistent folder = 
+let create_if_nonexistent ~colors folder =
+  let msg = Msg.term ~colors in
   match Sys.file_exists folder with
   | true  -> (
       match Sys.is_directory folder with 
       | true  -> 
-        ( Msg.term `Notif "create media directory"
+        ( msg `Notif "create media directory"
             [ "Will reuse existing folder '"; folder; "'." ];
           Ok false )
       | false -> 
-        ( Msg.term `Error "create media directory"
+        ( msg `Error "create media directory"
             [ "The media-directory specified, '"; folder;
               "' is not a directory." ];
           Bad CreateFolder )
@@ -43,12 +44,12 @@ let create_if_nonexistent folder =
   | false -> (
       match Sys.command ("mkdir -p "^(folder |> escape)) with
       | 0 -> (
-          Msg.term `Notif "create media directory"
+          msg `Notif "create media directory"
             [ "The directory '"; folder; "' has been created." ];
           Ok true
         )
       | _ -> (
-          Msg.term `Error "create media directory"
+          msg `Error "create media directory"
             [ "The directory '"; folder; "' could not be created." ];
           Bad CreateFolder 
         )

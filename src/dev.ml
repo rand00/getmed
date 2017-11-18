@@ -117,6 +117,8 @@ module Parse = struct
       mountpoint = mountpoint_value;
     }
 
+  let device = parse_device
+
 end
 
 let pmatch ~pattern s = Pcre.pmatch ~pat:pattern s
@@ -135,33 +137,33 @@ let find_aux parse_dev is_dev =
   |> BatList.of_enum 
   |> CCList.find_map is_dev 
 
-let find ~settings () =
+let find ~settings:(s,colors) () =
   let open Rresult in
   let open Rc2 in
-  find_aux Parse.parse_device (function
-      | Ok dev when is_device settings.device_match dev -> Some dev
+  find_aux Parse.device (function
+      | Ok dev when is_device s.device_match dev -> Some dev
       | Ok _ -> None
       | Error _ ->
-        Msg.term `Notif "parse device"
+        Msg.term ~colors `Notif "parse device"
           [ "Failed to parse some device." ];
         None 
     )
   |> function
-  | Some dev -> BatResult.Ok dev, settings
+  | Some dev -> BatResult.Ok dev, (s, colors)
   | None ->
-    ( Msg.term `Notif "find device"
-        [ "The device '"; settings.name; "' is not connected, ";
+    ( Msg.term ~colors `Notif "find device"
+        [ "The device '"; s.name; "' is not connected, ";
           "or you have not run getmed with enough rights." ];
-      (BatResult.Bad DeviceNotPresent), settings
+      (BatResult.Bad DeviceNotPresent), (s, colors)
     )
 
-let get_dir_if_mounted dev dir =
+let get_dir_if_mounted dev dir ~colors =
   match dev.mountpoint with
   | dir_existing when
       Sys.file_exists dir_existing
       && Sys.is_directory dir_existing ->
     begin
-      Msg.term `Notif "mount"
+      Msg.term ~colors `Notif "mount"
         [ "Device '"; dev.name; "' already mounted at '";
           dir_existing; "'. Will use existing ";
           "mountpoint." ];
@@ -169,8 +171,9 @@ let get_dir_if_mounted dev dir =
     end
   | _ -> Ok (`Mount dir) 
 
-let mountpoint_fix_or_find (dev:device) dir = 
-  get_dir_if_mounted dev dir
+let mountpoint_fix_or_find (dev:device) dir ~colors =
+  let msg = Msg.term ~colors in
+  get_dir_if_mounted dev dir ~colors 
   >>= function
   | (`Dont_mount dir_existing) as dir_and_action -> 
     Ok dir_and_action
@@ -179,19 +182,19 @@ let mountpoint_fix_or_find (dev:device) dir =
       match (Array.length (Sys.readdir dir)) with
       | 0 -> Ok dir_and_action
       | _ -> 
-        ( Msg.term `Error "fix mountpoint"
+        ( msg `Error "fix mountpoint"
             [ "The supplied mount-point '";
               dir;
               "'is not empty. "];
           Bad MountFolderNotEmpty )
     else if Sys.file_exists dir && not (Sys.is_directory dir) then
-      ( Msg.term `Error "fix mountpoint"
+      ( msg `Error "fix mountpoint"
           [ "The given mount-point '";
             dir;
             "' is not a directory."];
         Bad MountFolderIsNotADirectory )
     else (*if dir does not exist*) 
-      ( Msg.term `Notif "fix mountpoint"
+      ( msg `Notif "fix mountpoint"
           [ "Mount-point '";
             dir;
             "' does not exist - creating it now." ];
@@ -202,7 +205,9 @@ let mountpoint_fix_or_find (dev:device) dir =
           Bad exn
       )
 
-let mount dev = function
+let mount dev ~colors action =
+  let msg = Msg.term ~colors in
+  match action with 
   | `Dont_mount dir -> Ok dir
   | `Mount dir ->   
     (Sys.command 
@@ -210,30 +215,32 @@ let mount dev = function
           [ "mount"; dev.name; (dir |> Folder.escape) ]) 
      |> function 
      | 0 -> 
-       ( Msg.term `Notif "mount" [
+       ( msg `Notif "mount" [
              "Mount of device '"; dev.name;
              "' succesful."
            ]; 
          Ok dir )
      | errcode -> 
-       ( Msg.term `Error "mount" 
+       ( msg `Error "mount" 
            [ "Error occured during mounting. "; 
              "Error-code was '"; String.of_int errcode;
              "' - see 'man mount' for more info." ];
          Bad MountError ))
 
 let mount_smartly ~settings (dev:device) =
-  mountpoint_fix_or_find dev settings.mount_path
-  >>= mount dev
+  let dev_settings, colors = settings in
+  mountpoint_fix_or_find dev dev_settings.mount_path ~colors
+  >>= mount dev ~colors
   |> function
-  | Ok mount_path -> ((Ok ()), { settings with mount_path })
+  | Ok mount_path -> ((Ok ()), ({ dev_settings with mount_path }, colors))
   | (Bad _) as bad -> (bad, settings)
 
 let unmount ~settings () = 
-  let s = settings in
+  let s, colors = settings in
+  let msg = Msg.term ~colors in
   match s.unmount with
   | false -> 
-    ( Msg.term `Notif "unmount" [
+    ( msg `Notif "unmount" [
           "Not going to unmount device '";
           s.name; "'.";
         ];
@@ -242,13 +249,13 @@ let unmount ~settings () =
     (Sys.command ("umount " ^ (s.mount_path |> Folder.escape))
      |> function 
      | 0 -> 
-       ( Msg.term `Notif "unmount" [
+       ( msg `Notif "unmount" [
              "Unmount succesful for device '";
              s.name; "'.";
            ]; 
          Ok () )
      | errcode -> 
-       ( Msg.term `Error "unmount" [
+       ( msg `Error "unmount" [
              "Error occured during unmounting device '";
              s.name; "'.";
              "Error-code was '";

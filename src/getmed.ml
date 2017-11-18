@@ -26,22 +26,24 @@ module S = StateResult.Settings
 
 (* goto rewrite all modules to use rresult? *)
 
-let handle_errors = function 
+let handle_errors ~colors r =
+  let msg = Msg.term ~colors in 
+  match r with 
   | ((Ok _), dev) ->
     begin
-      Msg.term `Major "handler" 
+      msg `Major "handler" 
         [ "Ran succesfully for device '"; dev.name;"'." ];
       Ok ()
     end
   | (Bad (BeforeMounting DeviceNotPresent), dev) ->
     begin
-      Msg.term `Notif "handler"
+      msg `Notif "handler"
         [ "Trying next device instead." ];
       Ok ()
     end
   | (Bad (BeforeMounting exn), dev) ->
     begin
-      Msg.term `Error "handler" [
+      msg `Error "handler" [
         "Failed on device '"; dev.name; "' with the ";
         "error: \n\t";
         Printexc.to_string exn;
@@ -50,12 +52,12 @@ let handle_errors = function
     end
   | (Bad exn_after_mounting, dev) ->
     begin
-      Msg.term `Error "handler" [
+      msg `Error "handler" [
         "Failed on device '"; dev.name; "' with the ";
         "error: \n\t";
         Printexc.to_string exn_after_mounting;
       ];
-      Dev.unmount ~settings:dev () |> ignore;
+      Dev.unmount ~settings:(dev, colors) () |> ignore;
       exit 1
     end
 
@@ -66,31 +68,30 @@ let bind_result f v = Result.Monad.bind v f
     . think
 *)
 let handle_devices ~(settings:Rc2.config) () =
-  let getmed_settings = settings in
+  let gs = settings in
   let rec loop devices () =
     match devices with
     | dev :: tl when dev.active ->
-      Msg.term `Major "handler" [
+      Msg.term ~colors:gs.colors `Major "handler" [
         "Starting transfer for device '";
         dev.name;
         "'."
       ];
       begin
-        Dev.find ~settings:dev () 
+        Dev.find ~settings:(dev, gs.colors) () 
         >>= Dev.mount_smartly
         >>@ Exceptions.wrap_renew (fun e -> BeforeMounting e)
         >>= Media.search 
-        >>? Rc2.print_dev_config ~debug:getmed_settings.debug
+        >>? Rc2.print_dev_config ~debug:gs.debug
 
         >>= fun ~settings media -> 
         StateResult.return () ~settings
         >> S.read @@ Media.dirs_fix
-        >> S.read @@ Media.transfer media
-          ~colors:getmed_settings.colors 
+        >> S.read @@ Media.transfer media 
         >> S.read @@ Media.cleanup media
         >> S.read @@ Dev.unmount
       end
-      |> handle_errors
+      |> handle_errors ~colors:gs.colors
       |> bind_result (loop tl)
     | _ :: tl -> loop tl ()
     | _ -> Ok ()
