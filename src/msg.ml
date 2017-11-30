@@ -96,22 +96,57 @@ let human_readable_time ~pr_second p =
   let hour = minute * 60 in
   let day = hour * 24 in
   let year = day * 365 in
-  let s = Printf.sprintf
+  let s = Printf.sprintf in
+  let plur s n = if n > 1 then s ^ "s" else s 
   in
   if p >= year then
-    s "%d year(s), %d day(s)"
-      (p/year) ((p mod year) / day)
+    let yrs = p/year 
+    and days = (p mod year) / day in
+    [ `D (s "%d " yrs);
+      `S (s "%s, " (plur "year" yrs));
+      `D (s "%d " days);
+      `S (s "%s" (plur "day" days)) ]
   else if p >= day then
-    s "%d day(s), %d hour(s), %d minute(s)"
-      (p/day) ((p mod day) / hour) ((p mod hour) / minute)
+    let days = p/day 
+    and hours = (p mod day) / hour 
+    and minutes = (p mod hour) / minute in
+    [ `D (s "%d " days);
+      `S (s "%s, " (plur "day" days));
+      `D (s "%d " hours);
+      `S (s "%s, " (plur "hour" hours));
+      `D (s "%d " minutes);
+      `S (s "%s" (plur "minute" minutes)); ]
   else if p >= hour then
-    s "%d hour(s), %d minute(s), %d second(s)"
-      (p/hour) ((p mod hour) / minute) ((p mod minute) / second)
+    let hours = (p mod day) / hour 
+    and minutes = (p mod hour) / minute
+    and seconds = (p mod minute) / second in
+    [ `D (s "%d " hours);
+      `S (s "%s, " (plur "hour" hours));
+      `D (s "%d " minutes);
+      `S (s "%s, " (plur "minute" minutes));
+      `D (s "%d " seconds);
+      `S (s "%s" (plur "second" seconds)); ]
   else if p >= minute then
-    s "%d minute(s), %d second(s)"
-      (p/minute) ((p mod minute) / second)
-  else 
-    s "%1.1f second(s)" (float p /. float second)
+    let minutes = (p mod hour) / minute
+    and seconds = (p mod minute) / second in
+    [ `D (s "%d " minutes);
+      `S (s "%s, " (plur "minute" minutes));
+      `D (s "%d " seconds);
+      `S (s "%s" (plur "second" seconds)); ]
+  else
+    let seconds = float p /. float second in
+    [ `D (s "%1.1f " seconds);
+      `S (s "%s" (plur "second" (p/second))); ]
+
+let style_digit_or_string d_color e = LTerm_text.(
+    match e with 
+      `D d -> [B_fg d_color; S d; E_fg]
+    | `S s -> [(*B_fg s_color;*) S s; (* E_fg *)] 
+)
+
+let style_digits_or_strings d_color l =
+  CCList.flat_map (style_digit_or_string d_color) l
+
 
 let progress
     ~colors
@@ -169,10 +204,11 @@ let progress
           (human_readable_bytes' full_transfer_size)
       );
       markup_box (markup_num transfer_speed);
-      markup_box [
-        S (s "ETR:%s"
-             (Int.of_float time_left
-              |> human_readable_time ~pr_second:1 ))
+      markup_box @@ List.flatten [
+        [ S (s "ETR:") ];
+        Int.of_float time_left
+        |> human_readable_time ~pr_second:1
+        |> style_digits_or_strings c_num (*goo*)
       ];
       [ S "\r" ];
     ])
