@@ -8,6 +8,16 @@ let update_rc_append_title title ~settings =
 
 let update_rc_debug debug (settings:config) = { settings with debug }
 
+let update_rc_safe_run safe_run (settings:config) = {
+  settings with
+  devices = List.map (fun d ->
+      { d with 
+        cleanup = `None;
+        unmount = false;
+      }
+    ) settings.devices 
+}
+
 let print_success settings = 
   let msg = match List.exists (fun d -> d.active) settings.devices with
     | false -> "No active devices."
@@ -40,7 +50,7 @@ let arg_handler print_template show_rc_options =
     Rc2.get_rc_options () |> print_endline;
     exit 0
   );
-  fun config_path append_title debug -> 
+  fun config_path append_title safe_run debug -> 
     let open Batteries in
     let open StateResult.Infix in
     let settings = Rc2.std in
@@ -55,6 +65,7 @@ let arg_handler print_template show_rc_options =
       |> Option.map (update_rc_append_title ~settings) 
       |> Option.default settings
       |> update_rc_debug debug
+      |> update_rc_safe_run safe_run
       |> Getmed.getmed
     end
     |> handle_errors_last
@@ -76,6 +87,10 @@ let append_title =
 let debug = 
   let doc = "Turns on debug-printing." in
   Arg.(value & flag & info ["debug"] ~docv:"DEBUG" ~doc)
+
+let safe_run = 
+  let doc = "Disable cleanup and unmount for all devices." in
+  Arg.(value & flag & info ["safe-run"] ~docv:"SAFE_RUN" ~doc)
 
 let print_template_rc =
   let doc = "Prints a template for defining your own \
@@ -114,9 +129,15 @@ let cmd =
     `S Manpage.s_see_also;
     `P "$(b,mount), $(b,unmount), $(b,fstab), $(b,sudo)"
   ] in
-  Term.(const arg_handler
-        $ print_template_rc $ show_rc_options
-        $ config_path $ append_title $ debug),
+  Term.(
+    const arg_handler
+    $ print_template_rc
+    $ show_rc_options
+    $ config_path
+    $ append_title
+    $ safe_run
+    $ debug
+  ),
   Term.(info "getmed" ~version ~doc ~man)
 
 let () = Term.(exit @@ eval cmd)
