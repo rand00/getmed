@@ -380,7 +380,11 @@ let remove files ~recursive ~colors =
 let cleanup media ~settings () =
   let s, colors = settings, settings.colors in 
   match s.device.cleanup with
-  | `None -> Ok ()
+  | `None ->
+    Msg.term ~colors `Notif "cleanup" [
+      "Not going to cleanup device '"; s.device.name; "'."
+    ];
+    Ok ()
   | `Remove_originals ->
     let media_files = List.map (fun {path} -> Folder.escape path) media
     in remove media_files ~recursive:false ~colors
