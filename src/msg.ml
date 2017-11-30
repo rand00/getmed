@@ -154,9 +154,9 @@ let progress
     ]) 
   and markup_num2 (n,u) (n', u') = LTerm_text.([
       B_fg c_num; S n; E_fg;
-      B_fg c_tsp; S u; S "/"; E_fg; 
+      (*B_fg c_tsp;*) S u; S "/"; (*E_fg; *)
       B_fg c_num; S n'; E_fg;
-      B_fg c_tsp; S u'; E_fg;
+      (* B_fg c_tsp; *) S u'; (* E_fg; *)
   ])
   and markup_num (n,u) = LTerm_text.([
     B_fg c_num; S n; E_fg; B_fg c_tsp; S u; E_fg; 

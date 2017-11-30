@@ -95,8 +95,8 @@ module T = struct
     where it's 'boolean'
   *)
   type config = {
-    debug : (bool [@default false]);
-    colors : color list;
+    debug : bool [@default false];
+    colors : color list [@default []];
     devices : device_config list;
   } [@@ deriving yojson { strict = false }]
 
@@ -204,9 +204,9 @@ module Default = struct
     `TextWarning, 5
   ]
 
-  let with_colors colors =
+  let with_colors colors' =
     let settings_with_default (cdefault, idefault) =
-      CCList.find_pred (is_same_color_tag cdefault) colors
+      CCList.find_pred (is_same_color_tag cdefault) colors'
       |> function 
       | Some c -> c
       | None -> cdefault, idefault in
