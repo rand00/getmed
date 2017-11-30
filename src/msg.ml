@@ -157,10 +157,10 @@ let progress
       (*B_fg c_tsp;*) S u; S "/"; (*E_fg; *)
       B_fg c_num; S n'; E_fg;
       (* B_fg c_tsp; *) S u'; (* E_fg; *)
-  ])
+    ])
   and markup_num (n,u) = LTerm_text.([
-    B_fg c_num; S n; E_fg; B_fg c_tsp; S u; E_fg; 
-  ]) in
+      B_fg c_num; S n; E_fg; (*B_fg c_tsp;*) S u; (*E_fg; *)
+    ]) in
   let progress_markup = LTerm_text.(List.flatten [
       markup_box [S (s "%-15s" progress_bar)];
       markup_box (
