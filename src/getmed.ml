@@ -50,6 +50,14 @@ let handle_errors ~colors r =
       ];
       exit 1
     end
+  | (Bad MediaNotPresent, s) ->
+    begin
+      msg `Notif "handler" [
+        "No media was present on device '"; s.device.name; "'."
+      ];
+      Dev.unmount ~settings:s () |> ignore;
+      Ok ()
+    end
   | (Bad exn_after_mounting, s) ->
     begin
       msg `Error "handler" [
