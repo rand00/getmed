@@ -142,9 +142,3 @@ let cmd =
 
 let () = Term.(exit @@ eval cmd)
 
-(*
-"is a CLI program for semi-automatically \
-     transferring media from a connected camera device. \
-     Make a '.getmedrc' file in your home-folder to \
-     specify your cameras settings."
-*)
