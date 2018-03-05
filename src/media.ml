@@ -34,23 +34,23 @@ open Exceptions
 
 let folder_prefix settings =
   match settings.device.folders_prepend with
-    | `Date -> Folder.Name.today ()
-    | `String s -> s
-    | `Nothing -> ""
+  | `Date -> Folder.Name.today ()
+  | `String s -> s
+  | `Nothing -> ""
 
 let concat_titles ~settings typ = 
   let s = settings in
   let c root = String.concat "" 
-    (List.flatten
-       [ [ root; "/"; folder_prefix s; ];
-         ( match s.device.folders_append with
-           | "" -> [ "" ] 
-           | _  -> [ "_"; s.device.folders_append ]);
-         ( match s.device.folders_append_cam_name with
-           | false -> [ "" ] 
-           | true  -> [ "."; s.device.name ])
-       ]
-    )
+      (List.flatten
+         [ [ root; "/"; folder_prefix s; ];
+           ( match s.device.folders_append with
+             | "" -> [ "" ] 
+             | _  -> [ "_"; s.device.folders_append ]);
+           ( match s.device.folders_append_cam_name with
+             | false -> [ "" ] 
+             | true  -> [ "."; s.device.name ])
+         ]
+      )
   in match typ with 
   | `Img -> List.map c s.device.image_destinations
   | `Img_meta -> List.map c s.device.image_destinations              
@@ -78,10 +78,11 @@ let dirs_fix ~settings () =
   | `All -> 
     ( create_dirs @@ concat_titles `Img ~settings >>= fun _ -> 
       create_dirs @@ concat_titles `Vid ~settings )
-  | `None -> 
-    ( Msg.term ~colors `Notif "setup media directories"
+  | `None -> (
+      Msg.term ~colors `Notif "setup media directories"
         [ "No media-files were present on the device." ];
-      Bad MediaNotPresent )
+      Bad MediaNotPresent
+    )
 
 
 type extensions = {
@@ -277,49 +278,45 @@ let search ~settings () =
   let types_to_transfer = 
     types_to_transfer_list
     |> which_media_types (fun t -> t)
-  in (Ok files, ({ s with device = { s.device with types_to_transfer }}))
+  in (Ok files, ({
+      s with device = { s.device with types_to_transfer }
+    }))
 
 
-let copy_file ~settings ~progress file =
+let copy_file ~settings ~progress file file_dest =
   let s, colors = settings, settings.colors in
   let msg = Msg.term ~colors in
   let open BatResult.Monad in
   let error str =
     print_endline "";
     msg `Error ("copy file:"^file.path) 
-        [ "An error '"; str;
-          "' occured on copying file." ]
+      [ "An error '"; str; "' occured on copying file." ]
   in
-  List.fold_left_result
-    (fun () destination_folder ->
-       let destination_file =
-         (destination_folder /: Filename.basename file.path) in
-       begin match Sys.file_exists destination_file with
-         | false -> Ok destination_folder
-         | true ->
-           print_endline "";
-           msg `Error "copy file" [
-             "Error while trying to copy file '";
-             file.path;
-             "' - the file already exists at '";
-             destination_file;
-             "'.";
-           ];
-           Bad MediaCopyFailure
-       end
-       >>= Result.catch (fun dest ->
-           let progress = progress ~file in
-           Unix.cp ~progress file.path dest
-         )
-       |> function
-       | Ok _ as ok -> ok
-       | Bad MediaCopyFailure as b -> b
-       | Bad exn ->
-         error @@ Printexc.to_string exn;
-         Bad MediaCopyFailure
+  let file_dest_full = file_dest /: Filename.basename file.path in
+  begin match Sys.file_exists file_dest_full with
+    | false -> Ok ()
+    | true ->
+      print_endline "";
+      msg `Error "copy file" [
+        "Error while trying to copy file '";
+        file.path;
+        "' - the file already exists at '";
+        file_dest_full;
+        "'.";
+      ];
+      Bad MediaCopyFailure
+  end
+  >>= Result.catch (fun () ->
+      let progress = progress ~file in
+      Unix.cp ~progress file.path file_dest
     )
-    ()
-    (concat_titles file.typ ~settings)
+  |> function
+  | Ok _ as ok -> ok
+  | Bad MediaCopyFailure as b -> b
+  | Bad exn ->
+    error @@ Printexc.to_string exn;
+    Bad MediaCopyFailure
+
 
 let map_result f v = BatResult.Monad.(
     bind v @@ return%f
@@ -327,25 +324,41 @@ let map_result f v = BatResult.Monad.(
 
 let (>|=) v f = map_result f v 
 
+(*goto rewrite to use new transfers type instead of media internally;
+  . make new type 
+  . use internally
+*)
 let transfer ~settings media () =
   let s, colors = settings, settings.colors in 
   let open BatResult.Infix in
+  (*goto fold through transfer-type *)
+  let transfers_of_file f = 
+    concat_titles f.typ ~settings
+    |> List.map (fun dest -> f, dest)
+  in
+  let transfers = List.map transfers_of_file media in
   let full_transfer_size = 
-    List.fold_left (fun acc file -> acc + file.size) 0 media in
+    List.fold_left (fun acc l ->
+        List.fold_left (fun acc (file, _) -> 
+            acc + file.size
+          ) acc l
+      ) 0 transfers in
   let start_time = Unix.gettimeofday () in
-  let result_copy = 
-    List.fold_left_result (fun prev_transf file ->
-        Msg.term_file_copy colors file;
-        let progress =
-          Msg.progress
-            ~colors 
-            ~start_time
-            ~full_transfer_size
-            ~prev_transf
-        in
-        copy_file ~settings ~progress file >|= fun () -> 
-        prev_transf + file.size
-      ) 0 media 
+  let result_copy =
+    List.fold_left_result (fun prev_transf file_transfers ->
+        List.fold_left_result (fun prev_transf (file, file_dest) -> 
+            Msg.term_file_copy colors file;
+            let progress =
+              Msg.progress
+                ~colors 
+                ~start_time
+                ~full_transfer_size
+                ~prev_transf
+            in
+            copy_file ~settings ~progress file file_dest >|= fun () -> 
+            prev_transf + file.size
+          ) prev_transf file_transfers
+      ) 0 transfers
   in 
   let _ = print_endline "" 
   in
