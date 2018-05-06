@@ -8,15 +8,16 @@ let update_rc_append_title title ~settings =
 
 let update_rc_debug debug (settings:config) = { settings with debug }
 
-let update_rc_safe_run safe_run (settings:config) = {
-  settings with
-  devices = List.map (fun d ->
-      { d with 
-        cleanup = `None;
-        unmount = false;
-      }
-    ) settings.devices 
-}
+let update_rc_safe_run safe_run (settings:config) =
+  if not safe_run then settings else {
+    settings with
+    devices = List.map (fun d ->
+        { d with 
+          cleanup = `None;
+          unmount = false;
+        }
+      ) settings.devices 
+  }
 
 let print_success settings = 
   let msg = match List.exists (fun d -> d.active) settings.devices with
