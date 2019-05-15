@@ -307,9 +307,9 @@ let copy_file ~settings ~progress file file_dest =
       Bad MediaCopyFailure
   end
   >>= Result.catch (fun () ->
-      let progress = progress ~file in
-      Unix.cp ~progress file.path file_dest
-    )
+    let progress = progress ~file in
+    Unix.cp ~progress file.path file_dest
+  )
   |> function
   | Ok _ as ok -> ok
   | Bad MediaCopyFailure as b -> b

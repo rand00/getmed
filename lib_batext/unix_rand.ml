@@ -51,6 +51,23 @@ let size_4k = Int.pow 2 12
 let size_1m = Int.pow 2 20 
 let cp_buffer_size = size_1m 
 
+let fs_of_file file =
+  let fs_str = command_getstr @@ "stat -f -c %T '"^file^"'" in
+  if
+    String.exists fs_str "ext2" ||
+    String.exists fs_str "ext3" ||
+    String.exists fs_str "ext4"
+  then
+    Some `Ext
+  else if String.exists fs_str "nfs"
+  then
+    Some `Nfs
+  else if String.exists fs_str "ntfs"
+  then
+    Some `Ntfs
+  else
+    None
+
 (*note: only for copying non-directories for now*)
 let cp ~progress fi fo =
   let fo =
@@ -72,5 +89,9 @@ let cp ~progress fi fo =
   end;
   IO.close_in i;
   IO.close_out o;
-  set_user_as_owner fo
+  match fs_of_file fo with
+  | Some `Ext -> 
+    set_user_as_owner fo
+  | Some (`Nfs | `Ntfs) -> ()
+  | None -> ()
 
