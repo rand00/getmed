@@ -40,18 +40,18 @@ let folder_prefix settings =
 
 let concat_titles ~settings typ = 
   let s = settings in
-  let c root = String.concat "" 
-      (List.flatten
-         [ [ root; "/"; folder_prefix s; ];
-           ( match s.device.folders_append with
-             | "" -> [ "" ] 
-             | _  -> [ "_"; s.device.folders_append ]);
-           ( match s.device.folders_append_cam_name with
-             | false -> [ "" ] 
-             | true  -> [ "."; s.device.name ])
-         ]
-      )
-  in match typ with 
+  let c root =
+    let title = match s.device.folders_append with
+      | "" -> "" 
+      | _  -> "_" ^ s.device.folders_append
+    and cam = match s.device.folders_append_cam_name with
+      | false -> "" 
+      | true  -> "." ^ s.device.name
+    in
+    let folder_name = folder_prefix s ^ title ^ cam in
+    Fpath.(v root / folder_name |> to_string) 
+  in
+  match typ with 
   | `Img -> List.map c s.device.image_destinations
   | `Img_meta -> List.map c s.device.image_destinations              
   | `Vid -> List.map c s.device.video_destinations
@@ -251,11 +251,15 @@ let search_aux search_subdir ~settings =
             | file_list -> ((Ok (file_list, types_to_transfer)), settings)))
 
     (*goto should we really fail here? - maybe yes*)
-    | false -> 
-      ( msg `Error "media search"
-          [ "The device directory '"; dir; "', does not ";
-            "exist." ];
-        ((Bad DeviceFolderNonExistent), settings) ))
+    | false ->
+      msg `Notif "media search"
+        [ "The device directory '"; dir; "', does not exist." ];
+      (Ok ([], `None), settings)
+  )
+      (* ( msg `Error "media search"
+       *     [ "The device directory '"; dir; "', does not ";
+       *       "exist." ];
+       *   ((Bad DeviceFolderNonExistent), settings) )) *)
 
 
 module S = StateResult.Settings
