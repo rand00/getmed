@@ -5,7 +5,8 @@ true: \
   thread, \
   package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime), \
   package(batteries,text,text.pcre, pcre, lambda-term), \
-  package(astring,rresult,ppx_deriving.show,containers,cmdliner)
+  package(astring,rresult,ppx_deriving.show,containers,cmdliner), \
+  package(fpath)
 
 <lib_batext/**>: \
   syntax(camlp4o), \
