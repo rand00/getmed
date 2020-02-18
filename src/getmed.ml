@@ -26,22 +26,23 @@ module S = StateResult.Settings
 
 (* goto rewrite all modules to use rresult? *)
 
-let handle_errors ~colors r =
-  let msg = Msg.term ~colors in 
-  match r with 
-  | ((Ok _), s) ->
+let handle_errors (result, settings) =
+  let s = settings in 
+  let msg = Msg.term ~colors:s.colors in 
+  match result with 
+  | Ok _ ->
     begin
       msg `Major "handler" 
         [ "Ran succesfully for device '"; s.device.name;"'." ];
       Ok ()
     end
-  | (Bad (BeforeMounting DeviceNotPresent), s) ->
+  | Bad (BeforeMounting DeviceNotPresent) ->
     begin
       msg `Notif "handler"
         [ "Trying next device instead." ];
       Ok ()
     end
-  | (Bad (BeforeMounting exn), s) ->
+  | Bad (BeforeMounting exn) ->
     begin
       msg `Error "handler" [
         "Failed on device '"; s.device.name; "' with the ";
@@ -50,7 +51,7 @@ let handle_errors ~colors r =
       ];
       exit 1
     end
-  | (Bad MediaNotPresent, s) ->
+  | Bad MediaNotPresent ->
     begin
       msg `Notif "handler" [
         "No media was present on device '"; s.device.name; "'."
@@ -58,7 +59,7 @@ let handle_errors ~colors r =
       Dev.unmount ~settings:s () |> ignore;
       Ok ()
     end
-  | (Bad exn_after_mounting, s) ->
+  | Bad exn_after_mounting ->
     begin
       msg `Error "handler" [
         "Failed on device '"; s.device.name; "' with the ";
@@ -100,7 +101,7 @@ let handle_devices ~(settings:Rc2.config) () =
         >> S.read @@ Media.cleanup media
         >> S.read @@ Dev.unmount
       end
-      |> handle_errors ~colors:settings.colors
+      |> handle_errors 
       |> bind_result (loop tl)
     | _ :: tl -> loop tl ()
     | _ -> Ok ()
