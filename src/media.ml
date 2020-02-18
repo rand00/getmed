@@ -59,7 +59,7 @@ let concat_titles ~settings typ =
   | _ -> failwith "pass an `Img or `Vid type"
 
 
-let dirs_fix ~settings () =
+let rec dirs_fix ~settings () =
   let s, colors = settings, settings.colors in 
   let create_dir _ folder =
     let created = Folder.create_if_nonexistent ~colors folder in
@@ -70,20 +70,29 @@ let dirs_fix ~settings () =
           "' to user." ]
     in created
   in
-  let create_dirs dirs = List.fold_left_result create_dir true dirs
+  let create_dirs dirs = List.fold_left_result create_dir true dirs in
+  let ( >|= ) v f = BatResult.map f v
   in
   match s.device.types_to_transfer with 
-  | `Img -> create_dirs @@ concat_titles `Img ~settings
-  | `Vid -> create_dirs @@ concat_titles `Vid ~settings
-  | `All -> 
-    ( create_dirs @@ concat_titles `Img ~settings >>= fun _ -> 
-      create_dirs @@ concat_titles `Vid ~settings )
+  | `Img ->
+    let image_dirs = concat_titles `Img ~settings in
+    create_dirs @@ image_dirs >|= fun _did_create ->
+    image_dirs
+  | `Vid ->
+    let video_dirs = concat_titles `Vid ~settings in
+    create_dirs @@ video_dirs >|= fun _did_create ->
+    video_dirs
+  | `All ->
+    let image_dirs = concat_titles `Img ~settings in
+    let video_dirs = concat_titles `Vid ~settings in
+    create_dirs @@ image_dirs >>= fun _ -> 
+    create_dirs @@ video_dirs >|= fun _ ->
+    image_dirs @ video_dirs
   | `None -> (
       Msg.term ~colors `Notif "setup media directories"
         [ "No media-files were present on the device." ];
       Bad MediaNotPresent
     )
-
 
 type extensions = {
   image_exts : string list;

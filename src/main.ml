@@ -24,7 +24,7 @@ let print_success settings =
     | false -> "No active devices."
     | true  -> "Ran succesfully for active devices."
   in
-  Msg.term `Major "main" [ msg ]
+  Msg.term ~colors:settings.colors `Major "main" [ msg ]
 
 let print_error exn_name s =
   Msg.term `Error "main" ~colors:Rc2.Default.colors
@@ -36,8 +36,14 @@ let print_error_exn exn =
     [ Printexc.to_string exn ];
   exit 1
 
-let handle_errors_last (r, settings) = match r with
-  | BatResult.Ok () -> print_success settings
+let handle_errors_last (r, (settings : Rc2.config)) = match r with
+  | BatResult.Ok (Some dirs_transferred_to) ->
+    print_success settings;
+    dirs_transferred_to |> CCList.iter @@ fun dir -> 
+    Msg.term ~colors:settings.colors `Notif "getmed" [
+      "Partial summary: Created dir: '"; dir; "'."
+    ]
+  | BatResult.Ok None -> print_success settings
   | BatResult.Bad (Exceptions.RcParseError s) ->
     print_error "Exceptions.RcParseError" s
   | BatResult.Bad e -> print_error_exn e 

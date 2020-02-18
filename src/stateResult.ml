@@ -15,6 +15,9 @@ let bind f (result, settings) =
   | Ok v  -> f ~settings v
   | (Bad _) as bad -> (bad, settings)
 
+let map f v =
+  v |> bind (fun ~settings v -> return ~settings (f v))
+
 (*goto this one could be dangerous, as we silently ignore a value*)
 let run f (result, settings) =
   match result with
@@ -65,6 +68,7 @@ module Infix = struct
 
   let ( >> ) v f = run f v 
   let ( >>= ) v f = bind f v
+  let ( >|= ) v f = map f v
   let ( >>! ) v f = run f v
   let ( >>? ) v f = read f v
   (*let ( >>+ ) v f = bind_settings f v*)
