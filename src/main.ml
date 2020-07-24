@@ -44,9 +44,9 @@ let handle_errors_last (r, (settings : Rc2.config)) = match r with
       "Partial summary: Created dir: '"; dir; "'."
     ]
   | BatResult.Ok None -> print_success settings
-  | BatResult.Bad (Exceptions.RcParseError s) ->
+  | BatResult.Error (Exceptions.RcParseError s) ->
     print_error "Exceptions.RcParseError" s
-  | BatResult.Bad e -> print_error_exn e 
+  | BatResult.Error e -> print_error_exn e 
   
 let arg_handler print_template show_rc_options = 
   if print_template then (

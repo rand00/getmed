@@ -26,4 +26,4 @@ let rec fold_left_result f acc = function
   | [] -> Ok acc
   | hd::tl -> (match f acc hd with 
     | Ok v -> fold_left_result f v tl
-    | Bad e as bad -> bad)
+    | Error e as bad -> bad)

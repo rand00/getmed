@@ -39,7 +39,7 @@ let create_if_nonexistent ~colors folder =
         ( msg `Error "create media directory"
             [ "The media-directory specified, '"; folder;
               "' is not a directory." ];
-          Bad CreateFolder )
+          Error CreateFolder )
     )
   | false -> (
       match Sys.command ("mkdir -p "^(folder |> escape)) with
@@ -51,7 +51,7 @@ let create_if_nonexistent ~colors folder =
       | _ -> (
           msg `Error "create media directory"
             [ "The directory '"; folder; "' could not be created." ];
-          Bad CreateFolder 
+          Error CreateFolder 
         )
     )
 

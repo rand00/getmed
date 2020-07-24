@@ -161,7 +161,7 @@ let progress
   in
   let c_sym = (get_c `Symbol colors)
   and c_num = (get_c `Number colors)
-  and c_tsp = (get_c `TextSpecial colors)
+  (* and c_tsp = (get_c `TextSpecial colors) *)
   in 
   let transferred = prev_transf + fo_transf in
   let pct_transferred =

@@ -13,7 +13,7 @@ let return ~settings v = (Ok v, settings)
 let bind f (result, settings) = 
   match result with 
   | Ok v  -> f ~settings v
-  | (Bad _) as bad -> (bad, settings)
+  | (Error _) as bad -> (bad, settings)
 
 let map f v =
   v |> bind (fun ~settings v -> return ~settings (f v))
@@ -22,21 +22,21 @@ let map f v =
 let run f (result, settings) =
   match result with
   | Ok _ -> f ~settings ()
-  | (Bad _) as bad -> (bad, settings)
+  | (Error _) as bad -> (bad, settings)
 
 let read f v = f v; v
 
 let bind_result f (result, settings) = 
   match result with 
   | Ok v  -> (f v, settings)
-  | (Bad _) as bad -> (bad, settings)
+  | (Error _) as bad -> (bad, settings)
 
 
 (*
 let bind_result f (result, settings) = (*goto weird name as value is mapped - this is bind_result*)
   match result with 
   | Ok v  -> (f v ~settings, settings)
-  | (Bad _) as bad -> (bad, settings)
+  | (Error _) as bad -> (bad, settings)
 *)
 
 (*note (read_ignore_val / >>! ) should just be functions taking unit argument instead*)
@@ -44,12 +44,12 @@ let bind_result f (result, settings) = (*goto weird name as value is mapped - th
 let inject v (result, settings) =
   match result with
   | Ok _ -> (v, settings)
-  | (Bad _) as bad -> (bad, settings)
+  | (Error _) as bad -> (bad, settings)
 
 let map_result_bad f (result, settings) =
   match result with
   | (Ok _) as ok   -> (ok, settings)
-  | (Bad e) -> (Bad (f e), settings)
+  | (Error e) -> (Error (f e), settings)
 
 
 module Settings = struct

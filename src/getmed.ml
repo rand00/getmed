@@ -36,13 +36,13 @@ let handle_errors (result, settings) =
         [ "Ran succesfully for device '"; s.device.name;"'." ];
       Ok (Some v)
     end
-  | Bad (BeforeMounting DeviceNotPresent) ->
+  | Error (BeforeMounting DeviceNotPresent) ->
     begin
       msg `Notif "handler"
         [ "Trying next device instead." ];
       Ok None
     end
-  | Bad (BeforeMounting exn) ->
+  | Error (BeforeMounting exn) ->
     begin
       msg `Error "handler" [
         "Failed on device '"; s.device.name; "' with the ";
@@ -51,7 +51,7 @@ let handle_errors (result, settings) =
       ];
       exit 1
     end
-  | Bad MediaNotPresent ->
+  | Error MediaNotPresent ->
     begin
       msg `Notif "handler" [
         "No media was present on device '"; s.device.name; "'."
@@ -59,7 +59,7 @@ let handle_errors (result, settings) =
       Dev.unmount ~settings:s () |> ignore;
       Ok None
     end
-  | Bad exn_after_mounting ->
+  | Error exn_after_mounting ->
     begin
       msg `Error "handler" [
         "Failed on device '"; s.device.name; "' with the ";

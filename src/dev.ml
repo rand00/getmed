@@ -155,7 +155,7 @@ let find ~settings () =
     ( Msg.term ~colors:s.colors `Notif "find device"
         [ "The device '"; s.device.name; "' is not connected, ";
           "or you have not run getmed with enough rights." ];
-      (BatResult.Bad DeviceNotPresent), s
+      (BatResult.Error DeviceNotPresent), s
     )
 
 let get_dir_if_mounted dev dir ~colors =
@@ -187,13 +187,13 @@ let mountpoint_fix_or_find (dev:device) dir ~colors =
             [ "The supplied mount-point '";
               dir;
               "'is not empty. "];
-          Bad MountFolderNotEmpty )
+          Error MountFolderNotEmpty )
     else if Sys.file_exists dir && not (Sys.is_directory dir) then
       ( msg `Error "fix mountpoint"
           [ "The given mount-point '";
             dir;
             "' is not a directory."];
-        Bad MountFolderIsNotADirectory )
+        Error MountFolderIsNotADirectory )
     else (*if dir does not exist*) 
       ( msg `Notif "fix mountpoint"
           [ "Mount-point '";
@@ -203,7 +203,7 @@ let mountpoint_fix_or_find (dev:device) dir ~colors =
           Unix.mkdir dir 0o755;
           Ok dir_and_action
         with exn ->
-          Bad exn
+          Error exn
       )
 
 let mount dev ~colors action =
@@ -226,7 +226,7 @@ let mount dev ~colors action =
            [ "Error occured during mounting. "; 
              "Error-code was '"; String.of_int errcode;
              "' - see 'man mount' for more info." ];
-         Bad MountError ))
+         Error MountError ))
 
 let mount_smartly ~settings (dev:device) =
   let s = settings in
@@ -235,7 +235,7 @@ let mount_smartly ~settings (dev:device) =
   |> function
   | Ok mount_path ->
     ((Ok ()), ({ s with device = { s.device with mount_path }}))
-  | (Bad _) as bad ->
+  | (Error _) as bad ->
     (bad, s)
 
 let unmount ~settings () = 
@@ -264,5 +264,5 @@ let unmount ~settings () =
              "Error-code was '";
              String.of_int errcode; "'."
            ];
-         Bad UnMountFailure ))
+         Error UnMountFailure ))
 

@@ -9,7 +9,7 @@ let validate_field res_ref test error_msg =
   test || (
     Msg.term `Error "validate RC" ~colors:Rc2.Default.colors
       [ "Field 'name' should be a non-empty string." ];
-    res_ref := BatResult.Bad RcValidationError;
+    res_ref := BatResult.Error RcValidationError;
     false
   )
 
@@ -57,8 +57,8 @@ let read_from_file ~settings file =
           { settings' with
             colors = settings'.colors |> Default.with_colors }
         in r, s
-      | BatResult.Bad _ as r -> r, settings
+      | BatResult.Error _ as r -> r, settings
     )
   | Result.Error e ->
-    BatResult.Bad (RcParseError e), settings
+    BatResult.Error (RcParseError e), settings
 

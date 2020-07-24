@@ -181,7 +181,7 @@ let find () =
       [ (*(Sys.getcwd ()) /: ".getmedrc";*)
         (Sys.getenv "HOME") /: ".getmedrc" ] )
   with Not_found ->
-    BatResult.Bad RcNotFound
+    BatResult.Error RcNotFound
   (*< note: this exn matches both 'find' and 'getenv'*)
 
 type file_path = string

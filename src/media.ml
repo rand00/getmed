@@ -91,7 +91,7 @@ let rec dirs_fix ~settings () =
   | `None -> (
       Msg.term ~colors `Notif "setup media directories"
         [ "No media-files were present on the device." ];
-      Bad MediaNotPresent
+      Error MediaNotPresent
     )
 
 type extensions = {
@@ -268,7 +268,7 @@ let search_aux search_subdir ~settings =
       (* ( msg `Error "media search"
        *     [ "The device directory '"; dir; "', does not ";
        *       "exist." ];
-       *   ((Bad DeviceFolderNonExistent), settings) )) *)
+       *   ((Error DeviceFolderNonExistent), settings) )) *)
 
 
 module S = StateResult.Settings
@@ -317,7 +317,7 @@ let copy_file ~settings ~progress file file_dest =
         file_dest_full;
         "'.";
       ];
-      Bad MediaCopyFailure
+      Error MediaCopyFailure
   end
   >>= Result.catch (fun () ->
     let progress = progress ~file in
@@ -325,10 +325,10 @@ let copy_file ~settings ~progress file file_dest =
   )
   |> function
   | Ok _ as ok -> ok
-  | Bad MediaCopyFailure as b -> b
-  | Bad exn ->
+  | Error MediaCopyFailure as b -> b
+  | Error exn ->
     error @@ Printexc.to_string exn;
-    Bad MediaCopyFailure
+    Error MediaCopyFailure
 
 
 let map_result f v = BatResult.Monad.(
@@ -401,7 +401,7 @@ let remove files ~recursive ~colors =
           [ "Errorcode from command 'rm' was '";
             String.of_int errcode;
             "'." ];
-        Bad RemoveFailure )
+        Error RemoveFailure )
 
 let cleanup media ~settings () =
   let s, colors = settings, settings.colors in 
@@ -423,7 +423,7 @@ let cleanup media ~settings () =
     if not @@ List.for_all Sys.file_exists files_at_mount then 
       ( Msg.term ~colors `Error "cleanup"
           [ "Some of the files we want to remove doesn't exist." ];
-        Bad RemoveFailure )
+        Error RemoveFailure )
     else 
       remove files_at_mount ~recursive:true ~colors
   
