@@ -126,7 +126,7 @@ let cmd =
         constructing your '~/.getmedrc'.";
     `P "If you use a system where mounting of devices is not \
         done automatically, $(tname) can do this for you. If \
-        needed $(tname) will call $(b,sudo) for you.";
+        needed, $(tname) will call $(b,sudo) for you.";
     `S Manpage.s_see_also;
     `P "$(b,mount), $(b,unmount), $(b,fstab), $(b,sudo)"
   ] in

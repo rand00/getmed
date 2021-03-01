@@ -200,10 +200,11 @@ let mountpoint_fix_or_find (dev:device) dir ~colors =
             dir;
             "' does not exist - creating it now." ];
         try
-          Unix.mkdir dir 0o755;
-          Ok dir_and_action
-        with exn ->
-          Error exn
+          (* Unix.mkdir dir 0o755; *) (*goto put these permissions on again?*)
+          match Unix.command_maybe_sudo @@ "mkdir "^dir with
+          | 0 -> Ok dir_and_action
+          | _ -> Error MountError
+        with exn -> Error exn
       )
 
 let mount dev ~colors action =
@@ -211,7 +212,7 @@ let mount dev ~colors action =
   match action with 
   | `Dont_mount dir -> Ok dir
   | `Mount dir ->   
-    (Sys.command 
+    (Unix.command_maybe_sudo
        (String.concat " " 
           [ "mount"; dev.name; (dir |> Folder.escape) ]) 
      |> function 
@@ -249,7 +250,7 @@ let unmount ~settings () =
         ];
       Ok () )
   | true  -> 
-    (Sys.command ("umount " ^ (s.device.mount_path |> Folder.escape))
+    (Unix.command_maybe_sudo ("umount " ^ (s.device.mount_path |> Folder.escape))
      |> function 
      | 0 -> 
        ( msg `Notif "unmount" [

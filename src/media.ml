@@ -383,11 +383,11 @@ let remove files ~recursive ~colors =
   match files with 
   | [] -> Ok ()
   | _  -> 
-    Sys.command @@
+    Unix.command_maybe_sudo @@
     String.concat " " (
       List.flatten @@
       ["rm"] ::
-      (if recursive then ["-rf"] else []) ::
+      (if recursive then ["-rf"] else ["-f"]) ::
       [ files ]
     )
     |> function
