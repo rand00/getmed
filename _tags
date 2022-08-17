@@ -3,17 +3,11 @@
 true: \
   safe_string, \
   thread, \
-  package(yojson,ppx_deriving_yojson,ppx_deriving_yojson.runtime), \
+  package(yojson,ppx_deriving_yojson), \
   package(batteries,text,text.pcre, pcre, lambda-term), \
   package(astring,rresult,ppx_deriving.show,containers,cmdliner), \
   package(fpath)
 
-<lib_batext/**>: \
-  syntax(camlp4o), \
-  package(text.pcre-syntax)
-
 <tests_/test_lsblk_match.*>: \
   package(astring, rresult, ppx_deriving.show, pcre, containers)
 
-#<src/rc2.ml>: \
-#  package(ppx_deriving_yojson)
