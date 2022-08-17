@@ -20,11 +20,11 @@ PKG lambda-term
 PKG text
 PKG textwrap
 
-PKG text.pcre
+#PKG text.pcre
 
 PKG pcre
 
-PKG text.pcre-syntax
+#PKG text.pcre-syntax
 
 PKG batteries
 
