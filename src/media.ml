@@ -360,7 +360,7 @@ let transfer ~settings media () =
   let result_copy =
     List.fold_left_result (fun prev_transf file_transfers ->
         List.fold_left_result (fun prev_transf (file, file_dest) -> 
-            Msg.term_file_copy colors file;
+            Msg.term_file_copy ~colors file;
             let progress =
               Msg.progress
                 ~colors 
