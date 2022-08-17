@@ -130,7 +130,7 @@ let cmd =
     `S Manpage.s_see_also;
     `P "$(b,mount), $(b,unmount), $(b,fstab), $(b,sudo)"
   ] in
-  Term.(
+  let term = Term.(
     const arg_handler
     $ print_template_rc
     $ show_rc_options
@@ -138,8 +138,11 @@ let cmd =
     $ append_title
     $ safe_run
     $ debug
-  ),
-  Term.(info "getmed" ~version ~doc ~man)
+  )
+  in
+  Cmd.(v (info "getmed" ~version ~doc ~man) term)
 
-let () = Term.(exit @@ eval cmd)
+let () =
+  Cmd.eval cmd
+  |> exit
 
