@@ -33,11 +33,6 @@ let command_maybe_sudo cmd =
   | 0 -> 0
   | _ -> Sys.command @@ "sudo "^cmd
 
-let term_ncolumns () = 
-  match command_getstr "stty size" with
-  | <:re< ["0"-"9"]+ " " (["0"-"9"]+ as cols) >> -> Int.of_string cols
-  | _ -> 60
-
 let get_command_output cmd =
   let cmd_out = Unix.open_process_in cmd in
   let outputs, exn = List.unfold_exc (fun () -> input_line cmd_out) in
